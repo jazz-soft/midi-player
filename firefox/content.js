@@ -15,32 +15,44 @@ var main = function() {
     if (str == 'f' || str == 'false' || str == 0) return false;
     return !!str;
   }
-  function toBool(attr) { return attr ? isTrue(attr.nodeValue) : false; }
-  function getAttr(attr) { if (attr) return attr.nodeValue; }
+  function getBool(x, a) { 
+    if (x && x.attributes && x.attributes[a]) return isTrue(x.attributes[a].nodeValue);
+    return false;
+  }
+  function getAttr(x, a) { 
+    if (x && x.attributes && x.attributes[a]) return x.attributes[a].nodeValue;
+    return '';
+  }
   function search() {
-    var a, x, i, j, s, obj;
+    var a, x, i, j, s, t;
     var all = [];
     var src;
     a = document.getElementsByTagName('BGSOUND');
     for (i = 0; i < a.length; i++) {
       x = a[i];
-      if (x.attributes && x.attributes['src']) {
-        s = x.attributes['src'].nodeValue;
-        if (s.match(_mid) || s.match(_midi) || s.match(_kar)) {
-          obj = { dom: x, type: 'bgsound', src: s, loop: toBool(x.attributes['loop']), auto: true, ctrl: false };
-          all.push(obj);
-        }
+      s = getAttr(x, 'src');
+      if (s.match(_mid) || s.match(_midi) || s.match(_kar)) {
+        all.push({
+          dom: x,
+          type: 'bgsound',
+          src: s,
+          loop: getBool(x, 'loop'),
+          auto: true,
+          ctrl: false,
+          h: 0,
+          w: 0
+        });
       }
     }
     a = document.getElementsByTagName('AUDIO');
     for (i = 0; i < a.length; i++) {
       x = a[i];
       src = [];
-      if (x.attributes && x.attributes['src']) src.push([getAttr(x.attributes['src'])]);
+      if (x.attributes && x.attributes['src']) src.push([getAttr(x, 'src')]);
       if (x.children) {
         for (j = 0; j < x.children.length; j++) {
           if (x.children[j].nodeName == 'SOURCE' && x.children[j].attributes) {
-            src.push([getAttr(x.children[j].attributes['src']), getAttr(x.children[j].attributes['type'])]);
+            src.push([getAttr(x.children[j], 'src'), getAttr(x.children[j], 'type')]);
           }
         }
       }
@@ -54,17 +66,62 @@ var main = function() {
         }
       }
       if (s) {
-        obj = { dom: x, type: 'audio', src: s, loop: false, auto: false, ctrl: true };
-        if (x.attributes) {
-          obj.loop = toBool(x.attributes['loop']);
-          obj.auto = toBool(x.attributes['autoplay']);
-          obj.auto = toBool(x.attributes['controls']);
-        }
-        all.push(obj);
+        all.push({
+          dom: x,
+          type: 'audio',
+          src: s,
+          loop: getBool(x, 'loop'),
+          auto: getBool(x, 'autoplay'),
+          ctrl: getBool(x, 'controls'),
+          h: x.clientHeight,
+          w: x.clientWidth
+        });
       }
     }
-    //a = document.getElementsByTagName('EMBED');
-    //a = document.getElementsByTagName('OBJECT');
+    a = document.getElementsByTagName('EMBED');
+    for (i = 0; i < a.length; i++) {
+      x = a[i];
+      s = getAttr(x, 'src');
+      t = s ? getAttr(x.children[j], 'type') : undefined;
+      if (s.match(_mid) || s.match(_midi) || s.match(_kar) || t ==__midi) {
+        all.push({
+          dom: x,
+          type: 'embed',
+          src: s,
+          loop: false,
+          auto: getBool(x, 'autostart'),
+          ctrl: false,
+          h: getAttr(x, 'height') || 0,
+          w: getAttr(x, 'width') || 0
+        });
+      }
+    }
+    a = document.getElementsByTagName('OBJECT');
+    for (i = 0; i < a.length; i++) {
+      x = a[i];
+      s = getAttr(x, 'data');
+      t = s ? getAttr(x.children[j], 'type') : undefined;
+      if (s.match(_mid) || s.match(_midi) || s.match(_kar) || t ==__midi) {
+        all.push({
+          dom: x,
+          type: 'object',
+          src: s,
+          loop: false,
+          auto: false,
+          ctrl: false,
+          h: getAttr(x, 'height') || 0,
+          w: getAttr(x, 'width') || 0
+        });
+      }
+      if (x.children) {
+        for (j = 0; j < x.children.length; j++) {
+          if (x.children[j].nodeName == 'PARAM' && x.children[j].attributes) {
+            if (getAttr(x.children[j], 'name') == 'loop') all[all.length - 1].loop = getBool(x.children[j], 'value');
+          }
+        }
+      }
+    }
+console.log(all);
   }
   console.log('Initializing MIDI Player...');
   search();
