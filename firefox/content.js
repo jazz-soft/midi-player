@@ -36,7 +36,7 @@ var main = function() {
           dom: x,
           type: 'bgsound',
           src: s,
-          loop: getBool(x, 'loop'),
+          loop: getAttr(x, 'loop') || 0,
           auto: true,
           ctrl: false,
           h: 0,
@@ -70,7 +70,7 @@ var main = function() {
           dom: x,
           type: 'audio',
           src: s,
-          loop: getBool(x, 'loop'),
+          loop: getBool(x, 'loop') ? -1 : 0,
           auto: getBool(x, 'autoplay'),
           ctrl: getBool(x, 'controls'),
           h: x.clientHeight,
@@ -88,7 +88,7 @@ var main = function() {
           dom: x,
           type: 'embed',
           src: s,
-          loop: false,
+          loop: 0,
           auto: getBool(x, 'autostart'),
           ctrl: false,
           h: getAttr(x, 'height') || 0,
@@ -106,7 +106,7 @@ var main = function() {
           dom: x,
           type: 'object',
           src: s,
-          loop: false,
+          loop: 0,
           auto: false,
           ctrl: false,
           h: getAttr(x, 'height') || 0,
@@ -116,7 +116,7 @@ var main = function() {
       if (x.children) {
         for (j = 0; j < x.children.length; j++) {
           if (x.children[j].nodeName == 'PARAM' && x.children[j].attributes) {
-            if (getAttr(x.children[j], 'name') == 'loop') all[all.length - 1].loop = getBool(x.children[j], 'value');
+            if (getAttr(x.children[j], 'name') == 'loop') all[all.length - 1].loop = getAttr(x.children[j], 'value') || 0;
           }
         }
       }
