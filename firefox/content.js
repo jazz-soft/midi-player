@@ -9,6 +9,9 @@ var main = function() {
   var __mpeg = 'audio/mpeg';
   var __ogg = 'audio/ogg';
   var __wav = 'audio/wav';
+  var _svg = "http://www.w3.org/2000/svg";
+  var _w = 270;
+  var _h = 40;
   var _all;
   function isTrue(str) {
     if (str == '') return true;
@@ -113,11 +116,11 @@ var main = function() {
           h: getAttr(x, 'height') || 0,
           w: getAttr(x, 'width') || 0
         });
-      }
-      if (x.children) {
-        for (j = 0; j < x.children.length; j++) {
-          if (x.children[j].nodeName == 'PARAM' && x.children[j].attributes) {
-            if (getAttr(x.children[j], 'name') == 'loop') all[all.length - 1].loop = getAttr(x.children[j], 'value') || 0;
+        if (x.children) {
+          for (j = 0; j < x.children.length; j++) {
+            if (x.children[j].nodeName == 'PARAM' && x.children[j].attributes) {
+              if (getAttr(x.children[j], 'name') == 'loop') all[all.length - 1].loop = getAttr(x.children[j], 'value') || 0;
+            }
           }
         }
       }
@@ -125,39 +128,60 @@ var main = function() {
     _all = all;
   }
   function Player(x) {
-//console.log('x =', x);
+    this.dom = x.dom;
+    this.type = x.type;
     this.src = x.src;
-    this.h = 40;
-    this.w = 270;
+    this.ctrl = x.type == 'object' || x.type == 'embed' || x.ctrl;
   }
   Player.prototype.create = function() {
     var self = this;
-    var div = document.createElement('div');
-    div.title = 'Loading ' + this.src;
-    div.style.display = 'inline-block';
-    div.style.margin = '0px';
-    div.style.padding = '0px';
-    div.style.borderStyle = 'solid';
-    div.style.borderColor = '#f00';
-    div.style.borderWidth = '1px';
-    div.style.cursor = 'default';
-    div.style.width = this.w + 'px';
-    div.style.height = this.h + 'px';
-    document.body.appendChild(div);
-    self.div = div;
+    var parent = self.dom.parentNode;
+    if (self.ctrl) {
+      self.div = document.createElement('div');
+      self.div.title = 'Loading ' + this.src;
+      self.div.style.display = 'inline-block';
+      self.div.style.margin = '0px';
+      self.div.style.padding = '0px';
+      self.div.style.borderStyle = 'none';
+      self.div.style.cursor = 'default';
+      self.div.style.width = _w + 'px';
+      self.div.style.height = _h + 'px';
+
+      var svg = document.createElementNS(_svg, 'svg');
+      svg.setAttributeNS(null, 'width', _w);
+      svg.setAttributeNS(null, 'height', _h);
+      self.div.appendChild(svg);
+
+      var rect = document.createElementNS(_svg, 'rect');
+      rect.setAttributeNS(null, 'x', 0);
+      rect.setAttributeNS(null, 'y', 0);
+      rect.setAttributeNS(null, 'rx', 4);
+      rect.setAttributeNS(null, 'ry', 4);
+      rect.setAttributeNS(null, 'width', _w);
+      rect.setAttributeNS(null, 'height', _h);
+      rect.setAttributeNS(null, 'fill', '#888');
+      svg.appendChild(rect);
+
+      parent.insertBefore(self.div, self.dom);
+    }
+    parent.removeChild(self.dom);
+    delete self.dom;
 
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
-          self.div.style.borderColor = '#0f0';
           var r = xhttp.responseText;
           self.data = '';
           for (var i = 0; i < r.length; i++) self.data += String.fromCharCode(r.charCodeAt(i) & 0xff);
-          self.div.title = self.src;
+          if (self.div) {
+            self.div.title = self.src;
+          }
+          console.log('MIDI loaded', self.src);
         }
         else {
-          self.div.title = 'Cannot load ' + self.src;
+          console.log('Cannot load', self.src);
+          if (self.div) self.div.title = 'Cannot load ' + self.src + ' ' + self.type;
         }
       }
     };
@@ -166,12 +190,12 @@ var main = function() {
     xhttp.send();
   }
 
-  console.log('Initializing MIDI Player...');
   search();
-  for (var i in _all) {
+  for (var i = 0; i < _all.length; i++) {
     var p = new Player(_all[i]);
     p.create();
   }
+  _all = [];
 };
 
 var script = document.createElement('script');
