@@ -198,6 +198,8 @@ var main = function() {
   _all = [];
 };
 
-var script = document.createElement('script');
-script.textContent = '(' + main.toString() + ')();';
-document.documentElement.appendChild(script);
+if (document instanceof HTMLDocument) {
+  var script = document.createElement('script');
+  script.textContent = '(' + main.toString() + ')();';
+  document.documentElement.appendChild(script);
+}
