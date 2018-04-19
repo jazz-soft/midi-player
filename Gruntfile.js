@@ -14,12 +14,12 @@ module.exports = function(grunt) {
         cwd: 'src',
         src: '*.js',
         dest: 'firefox'
-      //},
-      //safari: {
-      //  expand: true,
-      //  cwd: 'src',
-      //  src: '*.js',
-      //  dest: 'safari/web-midi-api.safariextension'
+      },
+      safari: {
+        expand: true,
+        cwd: 'src',
+        src: '*.js',
+        dest: 'safari/web-midi-api.safariextension'
       }
     }
   });
