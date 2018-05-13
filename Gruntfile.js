@@ -5,8 +5,18 @@ module.exports = function(grunt) {
       all: ['src/**/*.js']
     },
     import: {
-      src: 'node_modules/jzz/javascript/JZZ.js',
-      dest: 'src/_JZZ.js'
+      _JZZ: {
+        src: 'node_modules/jzz/javascript/JZZ.js',
+        dest: 'src/_JZZ.js'
+      },
+      _SMF: {
+        src: 'node_modules/jzz-midi-smf/javascript/JZZ.midi.SMF.js',
+        dest: 'src/_SMF.js'
+      },
+      _Player: {
+        src: 'node_modules/jzz-gui-player/javascript/JZZ.gui.Player.js',
+        dest: 'src/_Player.js'
+      }
     },
     uglify: {
       firefox: {
@@ -19,7 +29,7 @@ module.exports = function(grunt) {
         expand: true,
         cwd: 'src',
         src: '*.js',
-        dest: 'safari/web-midi-api.safariextension'
+        dest: 'safari/midi-player.safariextension'
       }
     }
   });
