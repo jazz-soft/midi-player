@@ -1,7 +1,9 @@
+var i;
 var main = function() {
   var _mid = /\.mid$/i;
   var _midi = /\.midi$/i;
   var _kar = /\.kar$/i;
+  var _rmi = /\.rmi$/i;
   var _mp3 = /\.mp3$/i;
   var _wav = /\.wav$/i;
   var _ogg = /\.ogg$/i;
@@ -9,9 +11,7 @@ var main = function() {
   var __mpeg = 'audio/mpeg';
   var __ogg = 'audio/ogg';
   var __wav = 'audio/wav';
-  var _svg = "http://www.w3.org/2000/svg";
-  var _w = 270;
-  var _h = 40;
+
   var _all;
   function isTrue(str) {
     if (str == '') return true;
@@ -27,6 +27,8 @@ var main = function() {
     if (x && x.attributes && x.attributes[a]) return x.attributes[a].nodeValue;
     return '';
   }
+  function isMidi(s, t) { return s.match(_mid) || s.match(_midi) || s.match(_kar) || s.match(_rmi) || t ==__midi; }
+  function isAudio(s, t) { return s.match(_mp3) || s.match(_wav) || s.match(_ogg) || t == __mpeg || t == __wav || t == __ogg; }
   function search() {
     var a, x, i, j, s, t;
     var all = [];
@@ -35,7 +37,7 @@ var main = function() {
     for (i = 0; i < a.length; i++) {
       x = a[i];
       s = getAttr(x, 'src');
-      if (s.match(_mid) || s.match(_midi) || s.match(_kar)) {
+      if (isMidi(s)) {
         all.push({
           dom: x,
           type: 'bgsound',
@@ -62,10 +64,10 @@ var main = function() {
       }
       s = undefined;
       for (j = 0; j < src.length; j++) {
-        if (src[j][0].match(_mid) || src[j][0].match(_midi) || src[j][0].match(_kar) || src[j][1] == __midi) {
+        if (isMidi(src[j][0], src[j][1])) {
           s = src[j][0]; break;
         }
-        if (src[j][0].match(_mp3) || src[j][0].match(_wav) || src[j][0].match(_ogg) || src[j][1] == __mpeg || src[j][1] == __wav || src[1] == __ogg) {
+        if (isAudio(src[j][0], src[j][1])) {
           break;
         }
       }
@@ -87,7 +89,7 @@ var main = function() {
       x = a[i];
       s = getAttr(x, 'src');
       t = s ? getAttr(x.children[j], 'type') : undefined;
-      if (s.match(_mid) || s.match(_midi) || s.match(_kar) || t ==__midi) {
+      if (isMidi(s, t)) {
         all.push({
           dom: x,
           type: 'embed',
@@ -105,7 +107,7 @@ var main = function() {
       x = a[i];
       s = getAttr(x, 'data');
       t = s ? getAttr(x.children[j], 'type') : undefined;
-      if (s.match(_mid) || s.match(_midi) || s.match(_kar) || t ==__midi) {
+      if (isMidi(s, t)) {
         all.push({
           dom: x,
           type: 'object',
@@ -127,79 +129,64 @@ var main = function() {
     }
     _all = all;
   }
-  function Player(x) {
-    this.dom = x.dom;
-    this.type = x.type;
-    this.src = x.src;
-    this.ctrl = x.type == 'object' || x.type == 'embed' || x.ctrl;
-  }
-  Player.prototype.create = function() {
-    var self = this;
-    var parent = self.dom.parentNode;
-    if (self.ctrl) {
-      self.div = document.createElement('div');
-      self.div.title = 'Loading ' + this.src;
-      self.div.style.display = 'inline-block';
-      self.div.style.margin = '0px';
-      self.div.style.padding = '0px';
-      self.div.style.borderStyle = 'none';
-      self.div.style.cursor = 'default';
-      self.div.style.width = _w + 'px';
-      self.div.style.height = _h + 'px';
-
-      var svg = document.createElementNS(_svg, 'svg');
-      svg.setAttributeNS(null, 'width', _w);
-      svg.setAttributeNS(null, 'height', _h);
-      self.div.appendChild(svg);
-
-      var rect = document.createElementNS(_svg, 'rect');
-      rect.setAttributeNS(null, 'x', 0);
-      rect.setAttributeNS(null, 'y', 0);
-      rect.setAttributeNS(null, 'rx', 4);
-      rect.setAttributeNS(null, 'ry', 4);
-      rect.setAttributeNS(null, 'width', _w);
-      rect.setAttributeNS(null, 'height', _h);
-      rect.setAttributeNS(null, 'fill', '#888');
-      svg.appendChild(rect);
-
-      parent.insertBefore(self.div, self.dom);
-    }
-    parent.removeChild(self.dom);
-    delete self.dom;
+  function create(x) {
+    var parent = x.dom.parentNode;
+    var div = document.createElement('div');
+    div.style.display = 'inline-block';
+    div.style.margin = '0px';
+    div.style.padding = '0px';
+    div.style.borderStyle = 'none';
+    div.style.cursor = 'default';
+    div.title = 'Loading ' + x.src;
+    parent.insertBefore(div, x.dom);
+    var player = new JZZ.gui.Player(div);
+    parent.removeChild(x.dom);
 
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
           var r = xhttp.responseText;
-          self.data = '';
-          for (var i = 0; i < r.length; i++) self.data += String.fromCharCode(r.charCodeAt(i) & 0xff);
-          if (self.div) {
-            self.div.title = self.src;
+          var data = '';
+          for (var i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
+          try {
+            player.load(new JZZ.MIDI.SMF(data));
+            div.title = x.src;
           }
-          console.log('MIDI loaded', self.src);
+          catch (e) {
+            console.log(e.message ? e.message : e);
+            div.title = 'Cannot load ' + x.src;
+          }
         }
         else {
-          console.log('Cannot load', self.src);
-          if (self.div) self.div.title = 'Cannot load ' + self.src + ' ' + self.type;
+          div.title = 'Cannot load ' + x.src;
         }
       }
     };
     xhttp.overrideMimeType("text/plain; charset=x-user-defined");
-    xhttp.open("GET", self.src, true);
+    xhttp.open("GET", x.src, true);
     xhttp.send();
   }
+  var init = function() {
+    if (!window.JZZ) window.JZZ = _JZZ();
+    if (!JZZ.synth || !JZZ.synth.OSC) _OSC();
+    JZZ.synth.OSC.register('Web Audio');
+    JZZ().openMidiOut();
+    if (!JZZ.MIDI.SMF) _SMF();
+    if (!JZZ.gui || !JZZ.gui.Player) _Player();
+    init = function() {};
+  };
 
   search();
-  for (var i = 0; i < _all.length; i++) {
-    var p = new Player(_all[i]);
-    p.create();
-  }
+  if (_all.length) init();
+  for (i = 0; i < _all.length; i++) create(_all[i]);
   _all = [];
 };
 
 if (document instanceof HTMLDocument) {
+  var code = main.toString();
+  code = '(' + code.substring(0, code.lastIndexOf('}')) + _JZZ.toString() + _OSC.toString() + _SMF.toString() + _OSC.toString() + _Player.toString() + '})()';
   var script = document.createElement('script');
-  script.textContent = '(' + main.toString() + ')();';
+  script.textContent = code;
   document.documentElement.appendChild(script);
 }

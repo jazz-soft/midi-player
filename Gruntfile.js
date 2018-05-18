@@ -9,6 +9,10 @@ module.exports = function(grunt) {
         src: 'node_modules/jzz/javascript/JZZ.js',
         dest: 'src/_JZZ.js'
       },
+      _OSC: {
+        src: 'node_modules/jzz-synth-osc/javascript/JZZ.synth.OSC.js',
+        dest: 'src/_OSC.js'
+      },
       _SMF: {
         src: 'node_modules/jzz-midi-smf/javascript/JZZ.midi.SMF.js',
         dest: 'src/_SMF.js'

@@ -262,7 +262,7 @@ function _Player() {
     this._more = false;
   };
   Player.prototype.settings = function() {
-    if (this._more) return;
+    if (this._more || this._connector) return;
     var self = this;
     this._more = true;
     this.moreBtn.on();
@@ -282,6 +282,7 @@ function _Player() {
       self._newname = undefined;
       self._closeselect();
     }).and(function() {
+      if (self._connector) return;
       self._outname = self._newname;
       if (self._player) {
         self._player.sndOff();
@@ -359,6 +360,33 @@ function _Player() {
         if (to < 0) to = 0;
         if (to > 100) to = 100;
         this.jump(this.duration() * to / 100.0);
+      }
+    }
+  };
+
+  Player.prototype.connect = function(port) {
+    if (!this._connector) {
+      this._connector = new JZZ.Widget();
+      if (this._player) {
+        if (this._playing) this._player.sndOff();
+        this._player.disconnect();
+        this._player.connect(this._connector);
+      }
+      this.moreBtn.disable();
+      this._out = this._connector;
+    }
+    this._connector.connect(port);
+  };
+  Player.prototype.disconnect = function(port) {
+    if (this._connector) {
+      if (this._player && this._playing) this._player.sndOff();
+      this._connector.disconnect(port);
+      if (!this._connector.connected()) {
+        this.moreBtn.off();
+        this.select.style.display = 'none';
+        this._out = JZZ().openMidiOut();
+        if (this._player) this._player.connect(this._out);
+        this._connector = undefined;
       }
     }
   };

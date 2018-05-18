@@ -7,7 +7,6 @@ module.exports = function(grunt) {
     }
   };
   function process(name, input, output) {
-console.log(name, input, output);
     var i;
     var eol = require('os').EOL;
     var src = grunt.file.read(input).split(/\r?\n/);
@@ -22,5 +21,5 @@ console.log(name, input, output);
     res.push('}');
     res.push('');
     grunt.file.write(output, res.join(eol));
-  };
+  }
 };
