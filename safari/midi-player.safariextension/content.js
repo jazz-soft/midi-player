@@ -27,22 +27,29 @@ var main = function() {
     if (x && x.attributes && x.attributes[a]) return x.attributes[a].nodeValue;
     return '';
   }
+  function getInt(x, a) {
+    var n = getAttr(x, a);
+    return n == parseInt(n) ? n : 0;
+  }
   function isMidi(s, t) { return s.match(_mid) || s.match(_midi) || s.match(_kar) || s.match(_rmi) || t ==__midi; }
   function isAudio(s, t) { return s.match(_mp3) || s.match(_wav) || s.match(_ogg) || t == __mpeg || t == __wav || t == __ogg; }
   function search() {
-    var a, x, i, j, s, t;
+    var a, x, i, j, s, t, h, w;
     var all = [];
     var src;
     a = document.getElementsByTagName('BGSOUND');
     for (i = 0; i < a.length; i++) {
       x = a[i];
       s = getAttr(x, 'src');
+      w = getAttr(x, 'loop');
+      if (w.toLowerCase() == 'infinity') w = -1;
+      else if (w != parseInt(w) || w < 2) w = 0;
       if (isMidi(s)) {
         all.push({
           dom: x,
           type: 'bgsound',
           src: s,
-          loop: getAttr(x, 'loop') || 0,
+          loop: w,
           auto: true,
           ctrl: false,
           h: 0,
@@ -90,15 +97,17 @@ var main = function() {
       s = getAttr(x, 'src');
       t = s ? getAttr(x.children[j], 'type') : undefined;
       if (isMidi(s, t)) {
+        h = getInt(x, 'height');
+        w = getInt(x, 'width');
         all.push({
           dom: x,
           type: 'embed',
           src: s,
           loop: 0,
-          auto: getBool(x, 'autostart'),
-          ctrl: false,
-          h: getAttr(x, 'height') || 0,
-          w: getAttr(x, 'width') || 0
+          auto: getBool(x, 'autostart') || getBool(x, 'autoplay'),
+          h: h,
+          w: w,
+          ctrl: !!(h || w)
         });
       }
     }
@@ -108,15 +117,17 @@ var main = function() {
       s = getAttr(x, 'data');
       t = s ? getAttr(x.children[j], 'type') : undefined;
       if (isMidi(s, t)) {
+        h = getInt(x, 'height');
+        w = getInt(x, 'width');
         all.push({
           dom: x,
           type: 'object',
           src: s,
           loop: 0,
           auto: false,
-          ctrl: false,
-          h: getAttr(x, 'height') || 0,
-          w: getAttr(x, 'width') || 0
+          h: h,
+          w: w,
+          ctrl: !!(h || w)
         });
         if (x.children) {
           for (j = 0; j < x.children.length; j++) {
@@ -130,17 +141,26 @@ var main = function() {
     _all = all;
   }
   function create(x) {
+//console.log(x);
+    var player;
     var parent = x.dom.parentNode;
-    var div = document.createElement('div');
-    div.style.display = 'inline-block';
-    div.style.margin = '0px';
-    div.style.padding = '0px';
-    div.style.borderStyle = 'none';
-    div.style.cursor = 'default';
-    div.title = 'Loading ' + x.src;
-    parent.insertBefore(div, x.dom);
-    var player = new JZZ.gui.Player(div);
+    var div;
+    if (x.ctrl) {
+      div = document.createElement('div');
+      div.style.display = 'inline-block';
+      div.style.margin = '0px';
+      div.style.padding = '0px';
+      div.style.borderStyle = 'none';
+      div.style.cursor = 'default';
+      parent.insertBefore(div, x.dom);
+      player = new JZZ.gui.Player(div);
+    }
+    else {
+      player = new JZZ.gui.Player();
+    }
     parent.removeChild(x.dom);
+    div = player.gui;
+    div.title = 'Loading ' + x.src;
 
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
@@ -152,6 +172,8 @@ var main = function() {
           try {
             player.load(new JZZ.MIDI.SMF(data));
             div.title = x.src;
+            player.loop(x.loop);
+            if (x.auto) player.play();
           }
           catch (e) {
             console.log(e.message ? e.message : e);

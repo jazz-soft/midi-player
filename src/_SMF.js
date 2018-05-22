@@ -422,18 +422,21 @@ function _SMF() {
   };
 
   function Player() {
-    this.playing = false;
-    this.looped = false;
-    this._data = [];
-    this._pos = 0;
-    this._tick = (function(x) { return function(){ x.tick(); }; })(this);
+    var self = new JZZ.Widget();
+    self.playing = false;
+    self._loop = 0;
+    self._data = [];
+    self._pos = 0;
+    self._tick = (function(x) { return function(){ x.tick(); }; })(self);
+    for (var k in Player.prototype) if (Player.prototype.hasOwnProperty(k)) self[k] = Player.prototype[k];
+    return self;
   }
-  Player.prototype = new JZZ.Widget();
-  Player.prototype.constructor = Player;
-
   Player.prototype.onEnd = function() {};
   Player.prototype.onData = function() {};
-  Player.prototype.loop = function(b) { this.looped = b ? true : false; };
+  Player.prototype.loop = function(n) {
+    if (n == parseInt(n) && n > 0) this._loop = n;
+    else this._loop = n ? -1 : 0;
+  };
   Player.prototype.play = function() {
     if (this.ppqn) this.mul = this.ppqn / 500.0;
     else this.mul = this.fps * this.ppf / 1000.0;
@@ -503,7 +506,8 @@ function _SMF() {
       }
     }
     if (this._ptr >= this._data.length) {
-      if (this.looped) {
+      if (this._loop && this._loop != -1) this._loop--;
+      if (this._loop) {
         this._ptr = 0;
         this._p0 = 0;
         this._t0 = t;
@@ -532,7 +536,7 @@ function _SMF() {
   Player.prototype.duration = function() { return this._duration; };
   Player.prototype.position = function() { return this._pos; };
   Player.prototype.jump = function(pos) {
-    if (Number.isNaN(Number.parseFloat(pos))) _error('Not a number: ' + pos);
+    if (isNaN(parseFloat(pos))) _error('Not a number: ' + pos);
     if (pos < 0) pos = 0;
     if (pos >= this._duration) pos = this._duration - 1;
     this._pos = pos;
