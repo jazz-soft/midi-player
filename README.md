@@ -4,13 +4,16 @@
 
 ![MIDI Player](https://jazz-soft.github.io/img/jzzguiplayer.png)
 
-Plays MIDI files in `<audio>`, `<bgsound>`, `<object>`, `<embed>` tags.
+Playing MIDI files in `<audio>`, `<bgsound>`, `<object>`, `<embed>` tags.
 
 ## Chrome
 Coming soon...
 
 ## Firefox
-Coming soon...
+[Get the **MIDI Player** extension from **Mozilla Add-ons**](https://addons.mozilla.org/en-US/firefox/addon/midi-player).  
+This add-on requires
+[**Jazz-MIDI**](https://addons.mozilla.org/en-US/firefox/addon/jazz-midi/) extension and
+[**Jazz-Plugin**](https://jazz-soft.net).
 
 ## Safari
 Coming soon...
