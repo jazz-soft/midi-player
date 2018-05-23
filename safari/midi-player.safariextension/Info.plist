@@ -48,5 +48,7 @@
 	</dict>
 	<key>Website</key>
 	<string>https://jazz-soft.net</string>
+	<key>Update From Gallery</key>
+	<true/>
 </dict>
 </plist>
