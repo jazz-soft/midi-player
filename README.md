@@ -6,8 +6,11 @@
 
 Playing MIDI files in `<audio>`, `<bgsound>`, `<object>`, `<embed>` tags.
 
-## Chrome
-Coming soon...
+## Chrome & Opera
+[Get the **MIDI Player** extension from **Chrome Web Store**](https://chrome.google.com/webstore/detail/midi-player/khppfbnjbaampmeeiocjhcodkklkcfjf).  
+This add-on requires
+[**Jazz-MIDI**](https://chrome.google.com/webstore/detail/jazz-midi/jhdoobfdaejmldnpihidjemjcbpfmbkm) extension and
+[**Jazz-Plugin**](https://jazz-soft.net).
 
 ## Firefox
 [Get the **MIDI Player** extension from **Mozilla Add-ons**](https://addons.mozilla.org/en-US/firefox/addon/midi-player).  
