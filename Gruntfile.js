@@ -7,19 +7,19 @@ module.exports = function(grunt) {
     import: {
       _JZZ: {
         src: 'node_modules/jzz/javascript/JZZ.js',
-        dest: 'src/_JZZ.js'
+        dest: 'src/xJZZ.js'
       },
       _OSC: {
         src: 'node_modules/jzz-synth-osc/javascript/JZZ.synth.OSC.js',
-        dest: 'src/_OSC.js'
+        dest: 'src/xOSC.js'
       },
       _SMF: {
         src: 'node_modules/jzz-midi-smf/javascript/JZZ.midi.SMF.js',
-        dest: 'src/_SMF.js'
+        dest: 'src/xSMF.js'
       },
       _Player: {
         src: 'node_modules/jzz-gui-player/javascript/JZZ.gui.Player.js',
-        dest: 'src/_Player.js'
+        dest: 'src/xPlayer.js'
       }
     },
     uglify: {

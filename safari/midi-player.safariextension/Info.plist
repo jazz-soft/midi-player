@@ -22,10 +22,10 @@
 		<dict>
 			<key>End</key>
 			<array>
-				<string>_JZZ.js</string>
-				<string>_OSC.js</string>
-				<string>_SMF.js</string>
-				<string>_Player.js</string>
+				<string>xJZZ.js</string>
+				<string>xOSC.js</string>
+				<string>xSMF.js</string>
+				<string>xPlayer.js</string>
 				<string>content.js</string>
 			</array>
 		</dict>
