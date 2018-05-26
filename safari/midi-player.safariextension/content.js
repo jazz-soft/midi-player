@@ -1,5 +1,6 @@
 var i;
 var main = function() {
+  var _data = /^data:audio\/midi/i;
   var _mid = /\.mid$/i;
   var _midi = /\.midi$/i;
   var _kar = /\.kar$/i;
@@ -31,7 +32,7 @@ var main = function() {
     var n = getAttr(x, a);
     return n == parseInt(n) ? n : 0;
   }
-  function isMidi(s, t) { return s.match(_mid) || s.match(_midi) || s.match(_kar) || s.match(_rmi) || t ==__midi; }
+  function isMidi(s, t) { return s.match(_data) || s.match(_mid) || s.match(_midi) || s.match(_kar) || s.match(_rmi) || t ==__midi; }
   function isAudio(s, t) { return s.match(_mp3) || s.match(_wav) || s.match(_ogg) || t == __mpeg || t == __wav || t == __ogg; }
   function search() {
     var a, x, i, j, s, t, h, w;
@@ -141,7 +142,6 @@ var main = function() {
     _all = all;
   }
   function create(x) {
-//console.log(x);
     var player;
     var parent = x.dom.parentNode;
     var div;
@@ -160,7 +160,9 @@ var main = function() {
     }
     parent.removeChild(x.dom);
     div = player.gui;
-    div.title = 'Loading ' + x.src;
+    var title = x.src;
+    if (title.match(_data)) title = 'data:audio/midi';
+    div.title = 'Loading ' + title;
 
     var xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function() {
@@ -171,17 +173,17 @@ var main = function() {
           for (var i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
           try {
             player.load(new JZZ.MIDI.SMF(data));
-            div.title = x.src;
+            div.title = title;
             player.loop(x.loop);
             if (x.auto) player.play();
           }
           catch (e) {
             console.log(e.message ? e.message : e);
-            div.title = 'Cannot load ' + x.src;
+            div.title = 'Cannot load ' + title;
           }
         }
         else {
-          div.title = 'Cannot load ' + x.src;
+          div.title = 'Cannot load ' + title;
         }
       }
     };
