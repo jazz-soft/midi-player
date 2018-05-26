@@ -108,7 +108,7 @@ var main = function() {
           auto: getBool(x, 'autostart') || getBool(x, 'autoplay'),
           h: h,
           w: w,
-          ctrl: !!(h || w)
+          ctrl: true
         });
       }
     }
@@ -128,12 +128,14 @@ var main = function() {
           auto: false,
           h: h,
           w: w,
-          ctrl: !!(h || w)
+          ctrl: true
         });
         if (x.children) {
           for (j = 0; j < x.children.length; j++) {
             if (x.children[j].nodeName == 'PARAM' && x.children[j].attributes) {
               if (getAttr(x.children[j], 'name') == 'loop') all[all.length - 1].loop = getAttr(x.children[j], 'value') || 0;
+              if (getAttr(x.children[j], 'name') == 'autoplay') all[all.length - 1].auto = getBool(x.children[j], 'value');
+              if (getAttr(x.children[j], 'name') == 'autostart') all[all.length - 1].auto = getBool(x.children[j], 'value');
             }
           }
         }
