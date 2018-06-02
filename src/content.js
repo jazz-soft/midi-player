@@ -1,4 +1,3 @@
-var i;
 var main = function() {
   var _data = /^data:audio\/midi/i;
   var _mid = /\.mid$/i;
@@ -163,35 +162,49 @@ var main = function() {
     parent.removeChild(x.dom);
     div = player.gui;
     var title = x.src;
-    if (title.match(_data)) title = 'data:audio/midi';
-    div.title = 'Loading ' + title;
+    if (title.match(_data)) {
+      title = 'data:audio/midi';
+      try {
+        player.load(new JZZ.MIDI.SMF(JZZ.lib.fromBase64(x.src.substring(x.src.indexOf(',') + 1))));
+        div.title = title;
+        player.loop(x.loop);
+        if (x.auto) player.play();
+      }
+      catch (e) {
+        console.log(e.message ? e.message : e);
+        div.title = 'Cannot load ' + title;
+      }
+    }
+    else {
+      div.title = 'Loading ' + title;
 
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4) {
-        if (this.status == 200) {
-          var r = xhttp.responseText;
-          var data = '';
-          for (var i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
-          try {
-            player.load(new JZZ.MIDI.SMF(data));
-            div.title = title;
-            player.loop(x.loop);
-            if (x.auto) player.play();
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            var r = xhttp.responseText;
+            var data = '';
+            for (var i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
+            try {
+              player.load(new JZZ.MIDI.SMF(data));
+              div.title = title;
+              player.loop(x.loop);
+              if (x.auto) player.play();
+            }
+            catch (e) {
+              console.log(e.message ? e.message : e);
+              div.title = 'Cannot load ' + title;
+            }
           }
-          catch (e) {
-            console.log(e.message ? e.message : e);
+          else {
             div.title = 'Cannot load ' + title;
           }
         }
-        else {
-          div.title = 'Cannot load ' + title;
-        }
-      }
-    };
-    xhttp.overrideMimeType("text/plain; charset=x-user-defined");
-    xhttp.open("GET", x.src, true);
-    xhttp.send();
+      };
+      xhttp.overrideMimeType("text/plain; charset=x-user-defined");
+      xhttp.open("GET", x.src, true);
+      xhttp.send();
+    }
   }
   var init = function() {
     if (!window.JZZ) window.JZZ = _JZZ();
@@ -211,8 +224,8 @@ var main = function() {
 
 if (document instanceof HTMLDocument) {
   var code = main.toString();
-  code = '(' + code.substring(0, code.lastIndexOf('}')) + _JZZ.toString() + _OSC.toString() + _SMF.toString() + _OSC.toString() + _Player.toString() + '})()';
+  code = '(' + code.substring(0, code.lastIndexOf('}')) + ';' + _JZZ.toString() + _OSC.toString() + _SMF.toString() + _OSC.toString() + _Player.toString() + '})()';
   var script = document.createElement('script');
-  script.textContent = code;
+  script.textContent = '\n\n/// begin: [code injected by MIDI Player browser extension]\n' + code + '\n/// end: [code injected by MIDI Player browser extension]\n\n';
   document.documentElement.appendChild(script);
 }
