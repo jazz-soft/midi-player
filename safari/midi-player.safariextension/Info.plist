@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.0.0.2</string>
+	<string>0.0.0.3</string>
 	<key>CFBundleVersion</key>
 	<string>0</string>
 	<key>Content</key>
@@ -31,7 +31,7 @@
 		</dict>
 	</dict>
 	<key>Description</key>
-	<string>MIDI Player</string>
+	<string>Play MIDI files on websites</string>
 	<key>DeveloperIdentifier</key>
 	<string>76EXZ289MK</string>
 	<key>ExtensionInfoDictionaryVersion</key>
@@ -46,9 +46,9 @@
 			<string>All</string>
 		</dict>
 	</dict>
-	<key>Website</key>
-	<string>https://jazz-soft.net</string>
 	<key>Update From Gallery</key>
 	<true/>
+	<key>Website</key>
+	<string>https://jazz-soft.net</string>
 </dict>
 </plist>
