@@ -19,7 +19,8 @@ For better sound quality, you may also want to install
 [**Jazz-Plugin**](https://jazz-soft.net).
 
 ## Safari
-While the extension is under approval by Apple,
+[Get the **MIDI Player** extension from **Safari Extension Gallery**](https://safari-extensions.apple.com/details/?id=com.yourcompany.midi-player-76EXZ289MK).  
+For Safari versions older than 9.0
 it is available [**here**](https://jazz-soft.net/download/midi-player/midi-player.0.0.0.3.safariextz).  
 You may also want to install
 [**Jazz-Plugin**](https://jazz-soft.net).
