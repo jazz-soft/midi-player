@@ -208,8 +208,8 @@ var main = function() {
   }
   var init = function() {
     if (!window.JZZ) window.JZZ = _JZZ();
-    if (!JZZ.synth || !JZZ.synth.OSC) _OSC();
-    JZZ.synth.OSC.register('Web Audio');
+    if (!JZZ.synth || !JZZ.synth.Tiny) _Tiny();
+    JZZ.synth.Tiny.register('Web Audio');
     JZZ().openMidiOut();
     if (!JZZ.MIDI.SMF) _SMF();
     if (!JZZ.gui || !JZZ.gui.Player) _Player();
@@ -224,7 +224,7 @@ var main = function() {
 
 if (document instanceof HTMLDocument) {
   var code = main.toString();
-  code = '(' + code.substring(0, code.lastIndexOf('}')) + ';' + _JZZ.toString() + _OSC.toString() + _SMF.toString() + _OSC.toString() + _Player.toString() + '})()';
+  code = '(' + code.substring(0, code.lastIndexOf('}')) + ';' + _JZZ.toString() + _Tiny.toString() + _SMF.toString() + _Player.toString() + '})()';
   var script = document.createElement('script');
   script.textContent = '\n\n/// begin: [code injected by MIDI Player browser extension]\n' + code + '\n/// end: [code injected by MIDI Player browser extension]\n\n';
   document.documentElement.appendChild(script);

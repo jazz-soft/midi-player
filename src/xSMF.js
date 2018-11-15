@@ -2,20 +2,41 @@ function _SMF() {
 
   if (JZZ.MIDI.SMF) return;
 
+  var _ver = '1.0.6';
+
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
 
+  function _num(n) {
+    var s = '';
+    if (n > 0x1fffff) s += String.fromCharCode(((n >> 21) & 0x7f) + 0x80);
+    if (n > 0x3fff) s += String.fromCharCode(((n >> 14) & 0x7f) + 0x80);
+    if (n > 0x7f) s += String.fromCharCode(((n >> 7) & 0x7f) + 0x80);
+    s += String.fromCharCode(n & 0x7f);
+    return s;
+  }
+  function _num2(n) {
+    return String.fromCharCode(n >> 8) + String.fromCharCode(n & 0xff);
+  }
+  function _num4(n) {
+    return String.fromCharCode((n >> 24) & 0xff) + String.fromCharCode((n >> 16) & 0xff) + String.fromCharCode((n >> 8) & 0xff) + String.fromCharCode(n & 0xff);
+  }
+  function _num4le(n) {
+    return String.fromCharCode(n & 0xff) + String.fromCharCode((n >> 8) & 0xff) + String.fromCharCode((n >> 16) & 0xff) + String.fromCharCode((n >> 24) & 0xff);
+  }
+
   function SMF() {
-    var type=1;
-    var ppqn=96;
+    var self = this instanceof SMF ? this : self = new SMF();
+    var type = 1;
+    var ppqn = 96;
     var fps;
     var ppf;
     if (arguments.length == 1) {
       if (arguments[0] instanceof SMF) {
-        this.dup(arguments[0]); return;
+        return arguments[0].copy();
       }
-      if (typeof arguments[0] == 'string' && arguments[0] != '0' && arguments[0] !='1' && arguments[0] != '2') {
-        this.load(arguments[0]); return;
+      if (typeof arguments[0] == 'string' && arguments[0] != '0' && arguments[0] != '1' && arguments[0] != '2') {
+        self.load(arguments[0]); return self;
       }
       type = parseInt(arguments[0]);
     }
@@ -30,35 +51,46 @@ function _SMF() {
     }
     else if (arguments.length) _error('Invalid parameters');
     if (isNaN(type) || type < 0 || type > 2) _error('Invalid parameters');
-    this.type = type;
+    self.type = type;
     if (typeof fps == 'undefined') {
       if (isNaN(ppqn) || ppqn < 0 || type > 0xffff) _error('Invalid parameters');
-      this.ppqn = ppqn;
+      self.ppqn = ppqn;
     }
     else {
       if (fps != 24 && fps != 25 && fps != 29 && fps != 30) _error('Invalid parameters');
       if (isNaN(ppf) || ppf < 0 || type > 0xff) _error('Invalid parameters');
-      this.fps = fps;
-      this.ppf = ppf;
+      self.fps = fps;
+      self.ppf = ppf;
     }
+    return self;
   }
+  SMF.version = function() { return _ver; };
 
   SMF.prototype = [];
   SMF.prototype.constructor = SMF;
-
-  SMF.prototype.dup = function(x) {
-    _error('Copy-constructor not yet implemented');
+  SMF.prototype.copy = function() {
+    var smf = new SMF();
+    smf.type = this.type;
+    smf.ppqn = this.ppqn;
+    smf.fps = this.fps;
+    smf.ppf = this.ppf;
+    smf.rmi = this.rmi;
+    smf.ntrk = this.ntrk;
+    for (var i = 0; i < this.length; i++) smf.push(this[i].copy());
+    return smf;
   };
 
   SMF.prototype.load = function(s) {
     if (s.substr(0, 4) == 'RIFF' && s.substr(8, 8) == 'RMIDdata') {
+      this.rmi = true;
       s = s.substr(20, s.charCodeAt(16) + s.charCodeAt(17) * 0x100 + s.charCodeAt(18) * 0x10000 + s.charCodeAt(19) * 0x1000000);
     }
     this.loadSMF(s);
   };
 
+  var MThd0006 = 'MThd' + String.fromCharCode(0) + String.fromCharCode(0) + String.fromCharCode(0) + String.fromCharCode(6);
   SMF.prototype.loadSMF = function(s) {
-    if (s.substr(0, 8) != 'MThd\0\0\0\6') _error('Not a MIDI file');
+    if (s.substr(0, 8) != MThd0006) _error('Not a MIDI file');
     this.type = s.charCodeAt(8) * 16 + s.charCodeAt(9);
     this.ntrk = s.charCodeAt(10) * 16 + s.charCodeAt(11);
     if (s.charCodeAt(12) > 0x7f) {
@@ -83,18 +115,34 @@ function _SMF() {
     if (p != s.length || n != this.ntrk) _error("Corrupted MIDI file");
   };
 
-  SMF.prototype.dump = function() {
+  SMF.prototype.dump = function(rmi) {
     var s = '';
-    var k = 0;
+    if (rmi) {
+      s = this.dump();
+      return 'RIFF' + _num4le(s.length + 12) + 'RMIDdata' + _num4le(s.length) + s;
+    }
+    this.ntrk = 0;
     for (var i = 0; i < this.length; i++) {
-      if (this[i] instanceof MTrk) k++;
+      if (this[i] instanceof MTrk) this.ntrk++;
       s += this[i].dump();
     }
-    s = (this.ppqn ? String.fromCharCode(this.ppqn >> 8) + String.fromCharCode(this.ppqn & 0xff) : String.fromCharCode(0x100 - this.fps) + String.fromCharCode(this.ppf)) + s;
-    s = 'MThd\0\0\0\6\0' + String.fromCharCode(this.type) + String.fromCharCode(k >> 8) + String.fromCharCode(k&0xff) + s;
+    s = (this.ppqn ? _num2(this.ppqn) : String.fromCharCode(0x100 - this.fps) + String.fromCharCode(this.ppf)) + s;
+    s = MThd0006 + String.fromCharCode(0) + String.fromCharCode(this.type) + _num2(this.ntrk) + s;
     return s;
   };
-  SMF.prototype.toString = function() { return "Midi File " + this.length; };
+  SMF.prototype.toString = function() {
+    var i;
+    this.ntrk = 0;
+    for (i = 0; i < this.length; i++) if (this[i] instanceof MTrk) this.ntrk++;
+    var a = ['SMF:', '  type: ' + this.type];
+    if (this.ppqn) a.push('  ppqn: ' + this.ppqn);
+    else a.push('  fps: ' + this.fps, '  ppf: ' + this.ppf);
+    a.push('  tracks: ' + this.ntrk);
+    for (i = 0; i < this.length; i++) {
+      a.push(this[i].toString());
+    }
+    return a.join('\n');
+  };
 
   function _var2num(s) {
     if (s.charCodeAt(0) < 0x80) return s.charCodeAt(0);
@@ -123,56 +171,81 @@ function _SMF() {
     pl.fps = this.fps;
     pl.ppf = this.ppf;
     var i;
+    var j;
     var tt = [];
-    for (i = 0; i < this.length; i++) if (this[i] instanceof MTrk) tt.push(this[i]);
-    if (this.type == 2) _error('Playing MIDI file type 2 not yet implemented');
-    var pp = [];
-    for (i = 0; i < tt.length; i++) pp[i] = 0;
+    var e;
+    var m = 0;
     var t = 0;
-    while (true) {
-      var b = true;
-      var m;
+    for (i = 0; i < this.length; i++) if (this[i] instanceof MTrk) tt.push(this[i]);
+    if (this.type == 2) {
       for (i = 0; i < tt.length; i++) {
-        while (pp[i] < tt[i].length && tt[i][pp[i]].time == t) {
-          var obj = tt[i][pp[i]];
-          var evt = new Event();
-          for (var attr in obj) if (obj.hasOwnProperty(attr)) evt[attr] = obj[attr];
-          evt.track = i;
-          pl._data.push(evt);
-          pp[i]++;
+        for (j = 0; j < tt[i].length; j++) {
+          e = JZZ.MIDI(tt[i][j]);
+          e.track = i;
+          t = e.tt + m;
+          e.tt = t;
+          pl._data.push(e);
         }
-        if (pp[i] >= tt[i].length) continue;
-        if(b) m = tt[i][pp[i]].time;
-        b = false;
-        if(m > tt[i][pp[i]].time) m = tt[i][pp[i]].time;
+        m = t;
       }
-      t = m;
-      if (b) break;
     }
+    else {
+      var pp = [];
+      for (i = 0; i < tt.length; i++) pp[i] = 0;
+      while (true) {
+        var b = true;
+        for (i = 0; i < tt.length; i++) {
+          while (pp[i] < tt[i].length && tt[i][pp[i]].tt == t) {
+            e = JZZ.MIDI(tt[i][pp[i]]);
+            e.track = i;
+            pl._data.push(e);
+            pp[i]++;
+          }
+          if (pp[i] >= tt[i].length) continue;
+          if(b) m = tt[i][pp[i]].tt;
+          b = false;
+          if(m > tt[i][pp[i]].tt) m = tt[i][pp[i]].tt;
+        }
+        t = m;
+        if (b) break;
+      }
+    }
+    if (pl.ppqn) pl.mul = pl.ppqn / 500.0;
+    else pl.mul = pl.fps * pl.ppf / 1000.0;
     pl._duration = t;
     return pl;
   };
 
   function Chunk(t, d) {
+    var i;
     if (this.sub[t]) return this.sub[t](t, d);
     if (typeof t != 'string' || t.length != 4) _error("Invalid chunk type: " + t);
+    for (i = 0; i < t.length; i++) if (t.charCodeAt(i) < 0 || t.charCodeAt(i) > 255) _error("Invalid chunk type: " + t);
+    if (typeof d != 'string') _error("Invalid data type: " + d);
+    for (i = 0; i < d.length; i++) if (d.charCodeAt(i) < 0 || d.charCodeAt(i) > 255) _error("Invalid data character: " + d[i]);
     this.type = t;
     this.data = d;
   }
+  SMF.Chunk = Chunk;
   Chunk.prototype = [];
   Chunk.prototype.constructor = Chunk;
+  Chunk.prototype.copy = function() { return new Chunk(this.type, this.data); };
 
   Chunk.prototype.sub = {
     'MThd': function() { _error("Illegal chunk type: MThd"); },
     'MTrk': function(t, d) { return new MTrk(d); }
   };
   Chunk.prototype.dump = function() {
-    var len = this.data.length;
-    return this.type + String.fromCharCode((len >> 24) & 255) + String.fromCharCode((len >> 16) & 255) + String.fromCharCode((len >> 8) & 255) + String.fromCharCode(len & 255) + this.data;
+    return this.type + _num4(this.data.length) + this.data;
+  };
+  Chunk.prototype.toString = function() {
+    return this.type + ': ' + this.data.length + ' bytes';
   };
 
 
   function MTrk(s) {
+    this._orig = this;
+    this._tick = 0;
     if(typeof s == 'undefined') {
       this.push(new Event(0, '\xff\x2f', ''));
       return;
@@ -226,203 +299,165 @@ function _SMF() {
       }
     }
   }
+  SMF.MTrk = MTrk;
 
   MTrk.prototype = [];
   MTrk.prototype.constructor = MTrk;
+  MTrk.prototype.copy = function() {
+    var trk = new MTrk();
+    trk.length = 0;
+    for (var i = 0; i < this.length; i++) trk.push(new JZZ.MIDI(this[i]));
+    return trk;
+  };
+
   MTrk.prototype.dump = function() {
     var s = '';
     var t = 0;
     var m = '';
-    var d;
-    var len;
+    var i, j;
+    for (i = 0; i < this.length; i++) {
+      s += _num(this[i].tt - t);
+      t = this[i].tt;
+      if (typeof this[i].dd != 'undefined') {
+        s += '\xff';
+        s += String.fromCharCode(this[i].ff);
+        s += _num(this[i].dd.length);
+        s += this[i].dd;
+      }
+      else if (this[i][0] == 0xf0 || this[i][0] == 0xf7) {
+        s += String.fromCharCode(this[i][0]);
+        s += _num(this[i].length - 1);
+        for (j = 1; j < this[i].length; j++) s += String.fromCharCode(this[i][j]);
+      }
+      else {
+        if (this[i][0] != m) {
+          m = this[i][0];
+          s += String.fromCharCode(this[i][0]);
+        }
+        for (j = 1; j < this[i].length; j++) s += String.fromCharCode(this[i][j]);
+      }
+    }
+    return 'MTrk' + _num4(s.length) + s;
+  };
+  MTrk.prototype.toString = function() {
+    var a = ['MTrk:'];
     for (var i = 0; i < this.length; i++) {
-      d = this[i].time - t;
-      t = this[i].time;
-      if (d > 0x1fffff) s += String.fromCharCode(((d >> 21) & 0x7f) + 0x80);
-      if (d > 0x3fff) s += String.fromCharCode(((d >> 14) & 0x7f) + 0x80);
-      if (d > 0x7f) s += String.fromCharCode(((d >> 7) & 0x7f) + 0x80);
-      s += String.fromCharCode(d & 0x7f);
-      if (this[i].status.charCodeAt(0) == 0xff || this[i].status.charCodeAt(0) == 0xf0 || this[i].status.charCodeAt(0) == 0xf7) {
-        s += this[i].status;
-        len = this[i].data.length;
-        if (len > 0x1fffff) s += String.fromCharCode(((len >> 21) & 0x7f) + 0x80);
-        if (len > 0x3fff) s += String.fromCharCode(((len >> 14) & 0x7f) + 0x80);
-        if (len > 0x7f) s += String.fromCharCode(((len >> 7) & 0x7f) + 0x80);
-        s += String.fromCharCode(len & 0x7f);
-      }
-      else if (this[i].status != m) {
-        m = this[i].status;
-        s += this[i].status;
-      }
-      s += this[i].data;
+      a.push(this[i].tt + ': ' + this[i].toString());
     }
-    len = s.length;
-    return 'MTrk' + String.fromCharCode((len >> 24) & 255) + String.fromCharCode((len >> 16) & 255) + String.fromCharCode((len >> 8) & 255) + String.fromCharCode(len & 255) + s;
+    return a.join('\n  ');
   };
-  MTrk.prototype.getTime = function() { return this[this.length - 1].time; };
-  MTrk.prototype.setTime = function(t) {
-    t = parseInt(t);
-    if (isNaN(t) || t < 0) _error('Invalid parameter');
-    var e = this[this.length - 1];
-    if (t < e.time) {
-      _error("not yet implemented");
-    }
-    e.time = t;
-  };
-  function _eventOrder(s, d) {
+  function _eventOrder(msg) {
     var x = {
-      '\xff\x00': 0,
-      '\xff\x03': 1,
-      '\xff\x02': 2,
-      '\xff\x54': 3,
-      '\xff\x51': 4,
-      '\xff\x58': 5,
-      '\xff\x59': 6,
-      '\xff\x20': 7,
-      '\xff\x21': 7,
-      '\xff\x06': 8,
-      '\xff\x04': 9,
-      '\xff\x01': 16,
-      '\xff\x05': 16,
-      '\xff\x7f': 17,
-      '\xff\x2f': 20
-    }[s];
+      0x00: 0,
+      0x03: 1,
+      0x02: 2,
+      0x54: 3,
+      0x51: 4,
+      0x58: 5,
+      0x59: 6,
+      0x20: 7,
+      0x21: 7,
+      0x06: 8,
+      0x04: 9,
+      0x01: 16,
+      0x05: 16,
+      0x7f: 17,
+      0x2f: 20
+    }[msg.ff];
     if (typeof x !== 'undefined') return x;
-    x = { 8: 10, 15: 11, 11: 12, 12: 13, 10: 15, 13: 15, 14: 15 }[s.charCodeAt(0) >> 4];
-    if (typeof x !== 'undefined') return x;
-    if ((s.charCodeAt(0) >> 4) == 9) return d.charCodeAt(1) ? 14 : 10;
+    if (msg.length) {
+      var s = msg[0] >> 4;
+      x = { 8: 10, 15: 11, 11: 12, 12: 13, 10: 15, 13: 15, 14: 15 }[s];
+      if (typeof x !== 'undefined') return x;
+      if (s == 9) return msg[1] ? 14 : 10;
+    }
     return 18;
   }
-  MTrk.prototype.addEvent = function(t, s, d) {
+
+  MTrk.prototype.add = function(t, msg) {
     t = parseInt(t);
     if(isNaN(t) || t < 0) _error('Invalid parameter');
-    s = s.toString();
-    d = d.toString();
+    msg = JZZ.MIDI(msg);
+    msg.tt = t;
+    if (this[this.length - 1].tt < t) this[this.length - 1].tt = t; // end of track
+    if (msg.ff == 0x2f || msg[0] == 0xff) return this;
+    var x = _eventOrder(msg);
     var i;
-    if (this.getTime() < t) this.setTime(t);
-    var x = this.eventOrder(s, d);
     for (i = 0; i < this.length; i++) {
-      if (this[i].time > t) break;
-      if (this[i].time == t && this.eventOrder(this[i].status, this[i].data) > x) break;
+      if (this[i].tt > t) break;
+      if (this[i].tt == t && _eventOrder(this[i]) > x) break;
     }
-    this.splice(i, 0, new Event(t, s, d));
-  };
-  MTrk.prototype.addMidi = function() {
-    var t = arguments[0];
-    var args = [];
-    for (var i = 1; i < arguments.length; i++) args.push(arguments[i]);
-//!!!!!!!
-    var msg = JZZ_.MIDI.apply(undefined, args).data();
-    var x = msg.charCodeAt(0);
-    if (x < 0x80 || x > 0xfe) _error('Invalid MIDI message');
-//!!!!!!!
-    var y = JZZ_.Midi.len(x);
-    if (typeof y !== 'undefined' && y != msg.length) _error('Invalid MIDI message');
-    this.addEvent(t, msg.substr(0, 1), msg.substr(1));
-  };
-  MTrk.prototype.addNote = function(t, ch, note, vel, dur) {
-    var n = parseInt(note);
-    if (isNaN(n)) n = parseInt(JZZ_.Midi[note]);
-    if (isNaN(n) || n < 0 || n > 127) _error('Invalid parameter');
-    ch = parseInt(ch);
-    if (isNaN(ch) || ch < 0 || ch > 15) _error('Invalid parameter');
-    if (typeof dur == 'undefined') dur = 0;
-    dur = parseInt(dur);
-    if (isNaN(dur) || dur < 0) _error('Invalid parameter');
-    if (typeof vel == 'undefined') vel = 127;
-    vel = parseInt(vel);
-    if (isNaN(vel) || vel < 0 || vel > 127) _error('Invalid parameter');
-    this.addMidi(t, 0x90 + ch, n, vel);
-    if(dur) this.addMidi(t + dur, 0x90 + ch, n, 0);
-  }; // need to rewrite!
-  MTrk.prototype.addName = function(t, str) { this.addEvent(t, '\xff\x03', str); };
-  MTrk.prototype.addText = function(t, str) { this.addEvent(t, '\xff\x01', str); };
-  MTrk.prototype.addTempo = function(t, bpm) {
-    var mspq = Math.round(60000000.0 / bpm);
-    var s = String.fromCharCode(0xff & (mspq >> 16)) + String.fromCharCode(0xff & (mspq >> 8)) + String.fromCharCode(0xff & mspq);
-    this.addEvent(t, '\xff\x51', s);
+    this.splice(i, 0, msg);
+    return this;
   };
 
+  MTrk.prototype.send = function(msg) { this._orig.add(this._tick, msg); };
+  MTrk.prototype.tick = function(t) {
+    if (t != parseInt(t) || t < 0) throw RangeError('Bad tick value: ' + t);
+    if (!t) return this;
+    var F = function() {}; F.prototype = this._orig;
+    var ttt = new F();
+    ttt._tick = this._tick + t;
+    return ttt;
+  };
+  MTrk.prototype.note = function(c, n, v, t) {
+    this.noteOn(c, n, v);
+    if (t > 0) this.tick(t).noteOff(c, n);
+    return this;
+  };
+  MTrk.prototype.ch = function(n) {
+    if (typeof n == 'undefined') return this;
+    if (n != parseInt(n) || n < 0 || n > 15) throw RangeError('Bad channel value: ' + n  + ' (must be from 0 to 15)');
+    return new Chan(this._orig, n, this._tick);
+  };
+
+  function Chan(orig, chan, tick) {
+    this._orig = orig;
+    this._chan = chan;
+    this._tick = tick;
+  }
+  Chan.prototype = new MTrk();
+  Chan.prototype.tick = function(t) {
+    if (t != parseInt(t) || t < 0) throw RangeError('Bad tick value: ' + t);
+    if (!t) return this;
+    return new Chan(this._orig, this._chan, this._tick + t);
+  };
+  Chan.prototype.ch = function(n) {
+    if (typeof n == 'undefined') return this._orig.tick(this._tick);
+    if (n != parseInt(n) || n < 0 || n > 15) throw RangeError('Bad channel value: ' + n  + ' (must be from 0 to 15)');
+    if (n == this._chan) return this;
+    return new Chan(this._orig, n, this._tick);
+  };
+  Chan.prototype.note = function(n, v, t) {
+    this.noteOn(n, v);
+    if (t) this.tick(t).noteOff(n);
+    return this;
+  };
+
+  JZZ.lib.copyMidiHelpers(MTrk, Chan);
 
   function Event(t, s, d) {
-    this.time = t;
+    this.tt = t;
     this.status = s;
     this.data = d;
-  }
-  Event.prototype.toString = function() {
-    var str;
-    var i;
-    var s0 = this.status.charCodeAt(0);
-    if (s0 > 0x7f && s0 != 0xff && s0 != 0xf0 && s0 != 0xf7) return JZZ_.MIDI(this.status + this.data).toString();
-    if (s0 == 0xff) {
-      var s1 = this.status.charCodeAt(1);
-      str = "ff" + (s1 > 15 ? '' : '0') + s1.toString(16) + ' ';
-      if (s1 == 0) {
-        str += 'Sequence number: ' + this.data.charCodeAt(0);
-        return str;
-      }
-      else if (s1 < 10) {
-        str += {
-          1: 'Text',
-          2: 'Copyright',
-          3: 'Track name',
-          4: 'Instrument',
-          5: 'Lyrics',
-          6: 'Marker',
-          7: 'Cue point',
-          8: 'Program name',
-          9: 'Device name'
-        }[s1];
-        str += ': ' + this.data;
-        return str;
-      }
-      else if (s1 == 0x20) str += 'MIDI channel: ';
-      else if (s1 == 0x21) str += 'MIDI port: ';
-      else if (s1 == 0x2f) {
-        str += 'End of track';
-        return str;
-      }
-      else if (s1 == 0x51) {
-        var ms = this.data.charCodeAt(0) * 65536 + this.data.charCodeAt(1) * 256 + this.data.charCodeAt(2);
-        var bpm = Math.round(60000000 * 100 / ms) / 100;
-        str += 'Tempo: ' + bpm + ' bpm';
-        return str;
-      }
-      else if (s1 == 0x54) {
-        str += 'SMPTE offset: ' + (this.data.charCodeAt(0) > 9 ? '' : '0') + this.data.charCodeAt(0).toString();
-        for (i = 1; i < this.data.length; i++) str += ':' + (this.data.charCodeAt(i) > 9 ? '' : '0') + this.data.charCodeAt(i);
-        return str;
-      }
-      else if (s1 == 0x58) {
-        var d = 1 << this.data.charCodeAt(1);
-        str += 'Time signature: ' + this.data.charCodeAt(0) + '/' + d;
-        str += ' ' + this.data.charCodeAt(2) + ' ' + this.data.charCodeAt(3);
-        return str;
-      }
-      else if (s1 == 0x59) {
-        str += 'Key signature: ';
-        var sf = this.data.charCodeAt(0);
-        var mi = this.data.charCodeAt(1);
-        if (sf & 0x80) sf = sf - 0x100;
-        sf += 7;
-        if (sf >= 0 && sf <= 14 && mi >= 0 && mi <= 1) {
-          if (mi) sf += 3;
-          str += ['Cb', 'Gb', 'Db', 'Ab', 'Eb', 'Bb', 'F', 'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#'][sf];
-          if (mi) str += 'min';
-          return str;
-        }
-      }
-      else if (s1 == 0x7f) str += 'Proprietary event: ';
+    var midi;
+    if (s.charCodeAt(0) == 0xff) {
+      midi = JZZ.MIDI.smf(s.charCodeAt(1), d);
     }
-    else if (s0 == 0xf0) str = 'SysEx: f0';
-    else if (s0 == 0xf7) str = 'SysEx cont.:';
-    else str = (s0 > 15 ? '' : '0') + s0.toString(16);
-    for (i = 0; i < this.data.length; i++) str += ' ' + (this.data.charCodeAt(i) > 15 ? '' : '0') + this.data.charCodeAt(i).toString(16);
-    return str;
-  };
+    else {
+      var a = [s.charCodeAt(0)];
+      for (var i = 0; i < d.length; i++) a.push(d.charCodeAt(i));
+      midi = JZZ.MIDI(a);
+    }
+    midi.tt = t;
+    return midi;
+  }
 
   function Player() {
     var self = new JZZ.Widget();
+    self._info.name = 'MIDI Player';
+    self._info.manufacturer = 'Jazz-Soft';
+    self._info.version = _ver;
     self.playing = false;
     self._loop = 0;
     self._data = [];
@@ -438,8 +473,6 @@ function _SMF() {
     else this._loop = n ? -1 : 0;
   };
   Player.prototype.play = function() {
-    if (this.ppqn) this.mul = this.ppqn / 500.0;
-    else this.mul = this.fps * this.ppf / 1000.0;
     this.event = undefined;
     this.playing = true;
     this.paused = false;
@@ -471,12 +504,6 @@ function _SMF() {
   Player.prototype.sndOff = function() {
     for (var c = 0; c < 16; c++) this._emit(JZZ.MIDI.allSoundOff(c));
   };
-  function _midi(s) {
-    var m = [];
-    var i;
-    for (i = 0; i < s.length; i++) m.push(s.charCodeAt(i));
-    return JZZ.MIDI(m);
-  }
   Player.prototype.tick = function() {
     var t = _now();
     var e;
@@ -484,26 +511,12 @@ function _SMF() {
     this._pos = this._p0 + (t - this._t0) * this.mul;
     for(; this._ptr < this._data.length; this._ptr++) {
       e = this._data[this._ptr];
-      if (e.time > this._pos) break;
-      evt = {};
-      if (e.status == '\xff\x51' && this.ppqn) {
-        this.mul = this.ppqn * 1000.0 / ((e.data.charCodeAt(0) << 16) + (e.data.charCodeAt(1) << 8) + e.data.charCodeAt(2));
+      if (e.tt > this._pos) break;
+      if (e.ff == 0x51 && this.ppqn) {
+        this.mul = this.ppqn * 1000.0 / ((e.dd.charCodeAt(0) << 16) + (e.dd.charCodeAt(1) << 8) + e.dd.charCodeAt(2));
         this._p0 = this._pos - (t - this._t0) * this.mul;
       }
-      else if (e.status.charCodeAt(0) == 0xf7) { evt.midi = e.data; }
-      else if (e.status.charCodeAt(0) != 0xff) { evt.midi = e.status + e.data; }
-      else {
-        evt.status = e.status;
-        evt.data = e.data;
-      }
-      evt.track = e.track;
-      if (typeof e.user != 'undefined') evt.user = e.user;
-      if (evt.midi) {
-        this._emit(_midi(evt.midi));
-      }
-      else {
-        this.onData(e);
-      }
+      this._emit(e);
     }
     if (this._ptr >= this._data.length) {
       if (this._loop && this._loop != -1) this._loop--;
@@ -549,9 +562,9 @@ function _SMF() {
   Player.prototype._toPos = function() {
     for(this._ptr = 0; this._ptr < this._data.length; this._ptr++) {
       e = this._data[this._ptr];
-      if (e.time >= this._pos) break;
-      if (e.status == '\xff\x51' && this.ppqn) {
-        this.mul = this.ppqn * 1000.0 / ((e.data.charCodeAt(0) << 16) + (e.data.charCodeAt(1) << 8) + e.data.charCodeAt(2));
+      if (e.tt >= this._pos) break;
+      if (e.ff == 0x51 && this.ppqn) {
+        this.mul = this.ppqn * 1000.0 / ((e.dd.charCodeAt(0) << 16) + (e.dd.charCodeAt(1) << 8) + e.dd.charCodeAt(2));
         this._p0 = this._pos - (_now() - this._t0) * this.mul;
       }
     }
