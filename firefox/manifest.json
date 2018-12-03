@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "MIDI Player",
   "description": "MIDI Player",
-  "version": "0.0.0.4",
-  "content_scripts": [{"matches": ["<all_urls>"], "js": ["xJZZ.js", "xTiny.js", "xSMF.js", "xPlayer.js", "content.js"], "all_frames": true, "run_at": "document_end"}],
+  "version": "0.0.0.5",
+  "content_scripts": [{"matches": ["<all_urls>"], "js": ["xJZZ.js", "xTiny.js", "xOSC.js", "xSMF.js", "xPlayer.js", "content.js"], "all_frames": true, "run_at": "document_end"}],
   "homepage_url": "http://jazz-soft.net"
 }

@@ -13,6 +13,10 @@ module.exports = function(grunt) {
         src: 'node_modules/jzz-synth-tiny/javascript/JZZ.synth.Tiny.js',
         dest: 'src/xTiny.js'
       },
+      _OSC: {
+        src: 'node_modules/jzz-synth-osc/javascript/JZZ.synth.OSC.js',
+        dest: 'src/xOSC.js'
+      },
       _SMF: {
         src: 'node_modules/jzz-midi-smf/javascript/JZZ.midi.SMF.js',
         dest: 'src/xSMF.js'
@@ -22,7 +26,7 @@ module.exports = function(grunt) {
         dest: 'src/xPlayer.js'
       }
     },
-    uglify: {
+    copy: {
       firefox: {
         expand: true,
         cwd: 'src',
@@ -37,8 +41,8 @@ module.exports = function(grunt) {
       }
     }
   });
-  grunt.loadNpmTasks('grunt-contrib-uglify');
+  grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.registerTask('import', require('./src/tools/import.js')(grunt));
-  grunt.registerTask('default', ['import', 'uglify']);
+  grunt.registerTask('default', ['import', 'copy']);
 };
