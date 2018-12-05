@@ -182,9 +182,12 @@ var main = function() {
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4) {
           if (this.status == 200) {
-            var r = xhttp.responseText;
             var data = '';
-            for (var i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
+            var r = xhttp.response;
+            if (r instanceof ArrayBuffer) {
+              r = new Uint8Array(r);
+              for (var i = 0; i < r.length; i++) data += String.fromCharCode(r[i]);
+            }
             try {
               player.load(new JZZ.MIDI.SMF(data));
               div.title = title;
@@ -201,8 +204,9 @@ var main = function() {
           }
         }
       };
-      xhttp.overrideMimeType("text/plain; charset=x-user-defined");
-      xhttp.open("GET", x.src, true);
+      xhttp.responseType = 'arraybuffer';
+      xhttp.overrideMimeType('text/plain; charset=x-user-defined');
+      xhttp.open('GET', x.src, true);
       xhttp.send();
     }
   }
