@@ -171,7 +171,6 @@ var main = function() {
         if (x.auto) player.play();
       }
       catch (e) {
-        console.log(e.message ? e.message : e);
         div.title = 'Cannot load ' + title;
       }
     }
@@ -200,7 +199,6 @@ var main = function() {
               if (x.auto) player.play();
             }
             catch (e) {
-              console.log(e.message ? e.message : e);
               div.title = 'Cannot load ' + title;
             }
           }
