@@ -6,12 +6,12 @@
   IgnorableNamespaces="uap3">
 
   <Identity
-    Name="1969Jazz-Soft.MIDIPlayerforEdge"
+    Name="1969Jazz-Soft.MIDIPlayerforMicrosoftEdge"
     Publisher="CN=61405402-A8F8-475C-A200-4D11CB82A4B2"
-    Version="0.0.0.0"/>
+    Version="0.0.1.0"/>
 
   <Properties>
-    <DisplayName>MIDI Player for Edge</DisplayName>
+    <DisplayName>MIDI Player for Microsoft Edge</DisplayName>
     <PublisherDisplayName>Jazz-Soft</PublisherDisplayName>
     <Logo>Assets/icon-50.png</Logo>
   </Properties>
@@ -30,7 +30,7 @@
     <Application Id="App">
       <uap:VisualElements
         AppListEntry="none"
-        DisplayName="MIDI Player for Edge"
+        DisplayName="MIDI Player for Microsoft Edge"
         Square150x150Logo="Assets/icon-150.png"
         Square44x44Logo="Assets/icon-44.png"
         Description="MIDI Player"
@@ -41,7 +41,7 @@
           <uap3:AppExtension Name="com.microsoft.edge.extension"
             Id="EdgeExtension"
             PublicFolder="Extension"
-            DisplayName="MIDI Player for Edge">
+            DisplayName="MIDI Player for Microsoft Edge">
           </uap3:AppExtension>
         </uap3:Extension>
       </uap3:Extensions>
