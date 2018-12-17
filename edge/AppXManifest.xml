@@ -36,7 +36,7 @@
         Description="MIDI Player"
         BackgroundColor="white">
       </uap:VisualElements>
-      <uap3:Extensions>
+      <Extensions>
         <uap3:Extension Category="windows.appExtension">
           <uap3:AppExtension Name="com.microsoft.edge.extension"
             Id="EdgeExtension"
@@ -44,7 +44,7 @@
             DisplayName="MIDI Player for Microsoft Edge">
           </uap3:AppExtension>
         </uap3:Extension>
-      </uap3:Extensions>
+      </Extensions>
     </Application>
   </Applications>
 </Package>
