@@ -1,6 +1,6 @@
 # midi-player
 
-## MIDI-Player browser extension
+## MIDI Player browser extension
 
 ![MIDI Player](https://jazz-soft.github.io/img/jzzguiplayer.png)
 
@@ -26,7 +26,7 @@ You may also want to install
 [**Jazz-Plugin**](https://jazz-soft.net).
 
 ## Microsoft Edge
-[Coming (hopefully) soon](https://www.microsoft.com/store/apps/9N1CMGX97PN1)...
+[Get the **MIDI Player for Microsoft Edge** extension from **Microsoft Store**](https://www.microsoft.com/store/apps/9N1CMGX97PN1).  
 
 *Your comments and suggestions are [**welcome**](https://jazz-soft.org).  
 We would really appreciate your [**support**](https://jazz-soft.net/donate)!*
