@@ -3,7 +3,7 @@
   "name": "MIDI Player",
   "author": "Jazz-Soft",
   "description": "MIDI Player",
-  "version": "0.0.1.0",
+  "version": "0.0.1.1",
   "content_scripts": [{"matches": ["<all_urls>"], "js": ["xJZZ.js", "xTiny.js", "xOSC.js", "xSMF.js", "xPlayer.js", "content.js"], "all_frames": true, "run_at": "document_end"}],
   "homepage_url": "http://jazz-soft.net"
 }
