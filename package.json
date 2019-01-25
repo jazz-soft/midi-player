@@ -7,8 +7,8 @@
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-jshint": "^2.0.0",
     "jzz": "^0.6.6",
-    "jzz-gui-player": "^1.0.4",
-    "jzz-midi-smf": "^1.0.8",
+    "jzz-gui-player": "^1.0.6",
+    "jzz-midi-smf": "^1.0.9",
     "jzz-synth-osc": "^1.1.1",
     "jzz-synth-tiny": "^1.0.3"
   },
