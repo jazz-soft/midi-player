@@ -13,10 +13,6 @@ module.exports = function(grunt) {
         src: 'node_modules/jzz-synth-tiny/javascript/JZZ.synth.Tiny.js',
         dest: 'src/xTiny.js'
       },
-      _OSC: {
-        src: 'node_modules/jzz-synth-osc/javascript/JZZ.synth.OSC.js',
-        dest: 'src/xOSC.js'
-      },
       _SMF: {
         src: 'node_modules/jzz-midi-smf/javascript/JZZ.midi.SMF.js',
         dest: 'src/xSMF.js'

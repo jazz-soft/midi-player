@@ -103,13 +103,13 @@ function _Player() {
     }
     else self.loopBtn = _noBtn;
 
-    if (arg.more) {
-      self.moreBtn = new Btn(svg_more);
-      self.moreBtn.div.style.left = right + 'px';
+    if (arg.midi) {
+      self.midiBtn = new Btn(svg_more);
+      self.midiBtn.div.style.left = right + 'px';
       right -= step;
-      self.moreBtn.div.title = 'midi';
-      self.moreBtn.div.addEventListener('click', function() { self.settings(); });
-      self.gui.appendChild(self.moreBtn.div);
+      self.midiBtn.div.title = 'midi';
+      self.midiBtn.div.addEventListener('click', function() { self.settings(); });
+      self.gui.appendChild(self.midiBtn.div);
 
       self.select = document.createElement('select');
       self.select.style.position = 'absolute';
@@ -124,14 +124,14 @@ function _Player() {
 
       self.gui.appendChild(self.select);
     }
-    else self.moreBtn = _noBtn;
+    else self.midiBtn = _noBtn;
 
-    if (arg.open) {
-      self.openBtn = new Btn(svg_open);
-      self.openBtn.div.style.left = right + 'px';
+    if (arg.file) {
+      self.fileBtn = new Btn(svg_open);
+      self.fileBtn.div.style.left = right + 'px';
       right -= step;
-      self.openBtn.div.title = 'file';
-      self.gui.appendChild(self.openBtn.div);
+      self.fileBtn.div.title = 'file';
+      self.gui.appendChild(self.fileBtn.div);
 
       self.fileInput = document.createElement('input');
       self.fileInput.type = 'file';
@@ -141,15 +141,15 @@ function _Player() {
       self.gui.appendChild(self.fileInput);
 
       if (window.FileReader) {
-        self.openBtn.off();
-        self.openBtn.div.addEventListener('click', function() { self.fileInput.click(); });
+        self.fileBtn.off();
+        self.fileBtn.div.addEventListener('click', function() { self.fileInput.click(); });
         self.fileInput.addEventListener('change', function(e) { _stopProp(e); self.readFile(e.target.files[0]); });
-        self.gui.addEventListener('drop', function(e) { _stopProp(e); self.openBtn.off(); self.readFile(e.dataTransfer.files[0]); });
-        self.gui.addEventListener('dragover', function(e) { _stopProp(e); self.openBtn.on(); e.dataTransfer.dropEffect = 'copy'; });
-        self.gui.addEventListener('dragexit', function(e) { _stopProp(e); self.openBtn.off(); });
+        self.gui.addEventListener('drop', function(e) { _stopProp(e); self.fileBtn.off(); self.readFile(e.dataTransfer.files[0]); });
+        self.gui.addEventListener('dragover', function(e) { _stopProp(e); self.fileBtn.on(); e.dataTransfer.dropEffect = 'copy'; });
+        self.gui.addEventListener('dragexit', function(e) { _stopProp(e); self.fileBtn.off(); });
       }
     }
-    else self.openBtn = _noBtn;
+    else self.fileBtn = _noBtn;
 
     if (arg.close) {
       self.closeBtn = document.createElement('div');
@@ -166,7 +166,7 @@ function _Player() {
       self.closeBtn.style.lineSpasing = '0';
       self.closeBtn.innerHTML = svg_close;
       self.closeBtn.title = 'close';
-      self.closeBtn.addEventListener('click', function() { self.close(); });
+      self.closeBtn.addEventListener('click', function() { self.destroy(); });
       self.gui.appendChild(self.closeBtn);
     }
 
@@ -219,15 +219,17 @@ function _Player() {
       pause: true,
       stop: true,
       loop: true,
-      open: false,
-      more: true,
-      close: false
+      file: false,
+      midi: true,
+      close: false,
+      connect: true
     };
     for (var k in arg) if (arg.hasOwnProperty(k) && typeof x[k] != 'undefined') arg[k] = x[k];
     if (typeof arg.at == 'undefined') arg.at = x;
     if (typeof arg.x == 'undefined') arg.x = x;
     if (typeof arg.y == 'undefined') arg.y = y;
     _createGUI(this, arg);
+    this._conn = arg.connect;
 
     if (typeof arg.at == 'string') {
       try {
@@ -255,13 +257,16 @@ function _Player() {
     this.gui.addEventListener('mousedown', function(e) { self._startmove(e); });
     document.body.appendChild(this.gui);
   }
+  Player.prototype = new JZZ.Widget();
+  Player.prototype.constructor = Player;
+
   Player.prototype.disable = function() {
     this.playBtn.disable();
     this.pauseBtn.disable();
     this.stopBtn.disable();
     this.loopBtn.disable();
-    this.moreBtn.disable();
-    this.openBtn.off();
+    this.midiBtn.disable();
+    this.fileBtn.off();
     this.rail.style.borderColor = '#aaa';
     this.rail.style.backgroundColor = '#888';
     this.caret.style.borderColor = '#aaa';
@@ -272,7 +277,7 @@ function _Player() {
     this.pauseBtn.off();
     this.stopBtn.off();
     this.loopBtn.off();
-    if (!this._out) this.moreBtn.off();
+    if (this._conn) this.midiBtn.off();
     this.rail.style.borderColor = '#ccc';
     this.caret.style.backgroundColor = '#aaa';
     this.caret.style.borderColor = '#ccc';
@@ -280,11 +285,13 @@ function _Player() {
   Player.prototype.load = function(smf) {
     var self = this;
     this._player = smf.player();
-    if (this._out) this._player.connect(this._out);
+    this._player.connect(this);
     this._player.onEnd = function() { self._onEnd(); };
     this.enable();
+    this.onLoad(smf);
   };
   Player.prototype.onEnd = function() {};
+  Player.prototype.onLoad = function() {};
   Player.prototype._onEnd = function() {
     this.onEnd();
     if (this._loop && this._loop != -1) this._loop--;
@@ -304,37 +311,46 @@ function _Player() {
     }
   };
   Player.prototype._move = function() {
-    var off = Math.round(this._player.position() * this.rlen / this._player.duration()) - 5;
+    var off = Math.round(this._player.positionMS() * this.rlen / this._player.durationMS()) - 5;
     this.caret.style.left = off + 'px';
   };
+  Player.prototype.onPlay = function() {};
+  Player.prototype.onResume = function() {};
   Player.prototype.play = function() {
     if (this._player) {
       var self = this;
       this.playBtn.on();
       this.pauseBtn.off();
-      if (this._out) {
-        if (this._playing) return;
-        this._waiting = false;
-        this._player.connect(this._out);
-        if (this._paused) this._player.resume();
-        else this._player.play();
+      if (this._playing) return;
+      if (this._paused) this.onResume();
+      else this.onPlay();
+      this._playing = true;
+      this._paused = false;
+      if (this._out || !this._conn) {
+        this._player.resume();
         this._moving = setInterval(function() { self._move(); }, 100);
-        this._playing = true;
-        this._paused = false;
       }
       else if (!this._waiting) {
         this._waiting = true;
         JZZ().openMidiOut(undefined, /MIDI Through/i).and(function() {
           self._out = this;
           self._outname = this.name();
-          self.play();
+          self._connect(this);
+          self._waiting = false;
+          if (self._playing) {
+            self._player.resume();
+            self._moving = setInterval(function() { self._move(); }, 100);
+          }
         });
       }
     }
   };
+  Player.prototype.onStop = function() {};
   Player.prototype.stop = function() {
     if (this._player) {
+      var self = this;
       this._player.stop();
+      JZZ.lib.schedule(function() { self.onStop(); });
       if (this._moving) clearInterval(this._moving);
       this._playing = false;
       this._paused = false;
@@ -343,6 +359,7 @@ function _Player() {
       this._move();
     }
   };
+  Player.prototype.onPause = function() {};
   Player.prototype.pause = function(p) {
     if (this._player) {
       var self = this;
@@ -350,6 +367,7 @@ function _Player() {
         if (typeof p == 'undefined' || p) {
           if (this._out) {
             this._player.resume();
+            this.onResume();
             this._moving = setInterval(function() { self._move(); }, 100);
             this._playing = true;
             this._paused = false;
@@ -362,6 +380,7 @@ function _Player() {
       else if (this._playing) {
         if (typeof p == 'undefined' || !p) {
           this._player.pause();
+          JZZ.lib.schedule(function() { self.onPause(); });
           if (this._moving) clearInterval(this._moving);
           this._playing = false;
           this._paused = true;
@@ -388,7 +407,7 @@ function _Player() {
       }
     }
   };
-  Player.prototype.close = function(n) {
+  Player.prototype.destroy = function(n) {
     this.stop();
     this.gui.parentNode.removeChild(this.gui);
   };
@@ -403,8 +422,7 @@ function _Player() {
       try {
         var smf = new JZZ.MIDI.SMF(data);
         self.stop();
-        self.load(smf);
-        self.play();
+        JZZ.lib.schedule(function() { self.load(smf); });
       }
       catch (err) {}
     };
@@ -414,15 +432,15 @@ function _Player() {
   // selecting MIDI
 
   Player.prototype._closeselect = function() {
-    this.moreBtn.off();
+    this.midiBtn.off();
     this.select.style.display = 'none';
     this._more = false;
   };
   Player.prototype.settings = function() {
-    if (!this._player || this._more || this._connector) return;
+    if (!this._player || this._more || !this._conn) return;
     var self = this;
     this._more = true;
-    this.moreBtn.on();
+    this.midiBtn.on();
     this.select.style.display = 'inline-block';
     JZZ().refresh().and(function() {
       var outs = this.info().outputs;
@@ -439,14 +457,13 @@ function _Player() {
       self._newname = undefined;
       self._closeselect();
     }).and(function() {
-      if (self._connector) return;
       self._outname = self._newname;
-      if (self._player) {
-        self._player.sndOff();
-        self._player.disconnect(self._out);
+      if (self._out) {
+        if (self._playing) for (var c = 0; c < 16; c++) self._out._receive(JZZ.MIDI.allSoundOff(c));
+        self._disconnect(self._out);
       }
       self._out = this;
-      if (self._player) self._player.connect(self._out);
+      self._connect(this);
       self._newname = undefined;
       self._closeselect();
     });
@@ -466,8 +483,15 @@ function _Player() {
     if (e.keyCode == 13 || e.keyCode == 32) this._selected();
   };
 
+  Player.prototype.type = function() { return this._player ? this._player.type() : 0; };
+  Player.prototype.tracks = function() { return this._player ? this._player.tracks() : 0; };
   Player.prototype.duration = function() { return this._player ? this._player.duration() : 0; };
+  Player.prototype.durationMS = function() { return this._player ? this._player.durationMS() : 0; };
   Player.prototype.position = function() { return this._player ? this._player.position() : 0; };
+  Player.prototype.positionMS = function() { return this._player ? this._player.positionMS() : 0; };
+  Player.prototype.tick2ms = function() { return this._player ? this._player.tick2ms() : 0; };
+  Player.prototype.ms2tick = function() { return this._player ? this._player.ms2tick() : 0; };
+  Player.prototype.onJump = function() {};
   Player.prototype.jump = function(pos) {
     if (this._player) {
       this._player.jump(pos);
@@ -484,6 +508,26 @@ function _Player() {
           this.pauseBtn.off();
         }
       }
+      this.onJump(this._player.position());
+    }
+  };
+  Player.prototype.jumpMS = function(pos) {
+    if (this._player) {
+      this._player.jumpMS(pos);
+      this._move();
+      if (!this._playing) {
+        if (pos) {
+          this._paused = true;
+          this.playBtn.off();
+          this.pauseBtn.on();
+        }
+        else {
+          this._paused = false;
+          this.playBtn.off();
+          this.pauseBtn.off();
+        }
+      }
+      this.onJump(this._player.position());
     }
   };
 
@@ -492,6 +536,7 @@ function _Player() {
 
   Player.prototype._mousedown = function(e) {
     if (_lftBtnDn(e) && this._player) {
+      e.preventDefault();
       this.caret.style.backgroundColor = '#ddd';
       this._wasPlaying = this._playing;
       this._player.pause();
@@ -501,6 +546,7 @@ function _Player() {
   };
   Player.prototype._startmove = function(e) {
     if (_lftBtnDn(e)) {
+      e.preventDefault();
       this._startX = parseInt(this.gui.style.left);
       this._startY = parseInt(this.gui.style.top);
       this._clickX = e.clientX;
@@ -530,9 +576,8 @@ function _Player() {
       e.preventDefault();
       var to = this._caretPos + e.clientX - this._caretX;
       if (to < 0) to = 0;
-      //if (to > 100) to = 100;
       if (to > this.rlen) to = this.rlen;
-      this.jump(this.duration() * to * 1.0 / this.rlen);
+      this.jumpMS(this.durationMS() * to * 1.0 / this.rlen);
     }
     else if (typeof this._startX != 'undefined') {
       e.preventDefault();
@@ -541,30 +586,26 @@ function _Player() {
     }
   };
 
+  Player.prototype._connect = Player.prototype.connect;
+  Player.prototype._disconnect = Player.prototype.disconnect;
+
   Player.prototype.connect = function(port) {
-    if (!this._connector) {
-      this._connector = new JZZ.Widget();
-      if (this._player) {
-        if (this._playing) this._player.sndOff();
-        this._player.disconnect();
-        this._player.connect(this._connector);
-      }
-      this.moreBtn.disable();
-      this._out = this._connector;
+    if (port == this) {
+      this._conn = true;
+      if (this._player) this.midiBtn.off();
     }
-    this._connector.connect(port);
+    else {
+      this._connect(port);
+    }
   };
   Player.prototype.disconnect = function(port) {
-    if (this._connector) {
-      if (this._player && this._playing) this._player.sndOff();
-      this._connector.disconnect(port);
-      if (!this._connector.connected()) {
-        this.moreBtn.off();
-        this.select.style.display = 'none';
-        this._out = JZZ().openMidiOut(undefined, /MIDI Through/i);
-        if (this._player) this._player.connect(this._out);
-        this._connector = undefined;
-      }
+    if (port == this) {
+      this._conn = false;
+      if (this._out) this._disconnect(this._out);
+      if (this._player) this.midiBtn.disable();
+    }
+    else {
+      this._disconnect(port);
     }
   };
 
