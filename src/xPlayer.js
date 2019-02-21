@@ -44,6 +44,7 @@ function _Player() {
   var svg_loop = '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>';
   var svg_more = '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>';
   var svg_open = '<svg fill="#555" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"/><path d="M10 4H2v16h20V6H12l-2-2z"/></svg>';
+  var svg_link = '<svg fill="#555" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/><path fill="none" d="M0 0h24v24H0z"/></svg>';
   var svg_close = '<svg stroke="#ff8" xmlns="http://www.w3.org/2000/svg" width="7" height="7" viewBox="0 0 7 7"><line x1="1" y1="1" x2="6" y2="6"/><line x1="1" y1="6" x2="6" y2="1"/></svg>';
 
   function _stopProp(e) { e.stopPropagation(); e.preventDefault(); }
@@ -125,6 +126,14 @@ function _Player() {
       self.gui.appendChild(self.select);
     }
     else self.midiBtn = _noBtn;
+
+    if (arg.link) {
+      self.linkBtn = new Btn(svg_link);
+      self.linkBtn.div.style.left = right + 'px';
+      right -= step;
+      self.linkBtn.div.title = 'link';
+      self.gui.appendChild(self.linkBtn.div);
+    }
 
     if (arg.file) {
       self.fileBtn = new Btn(svg_open);
@@ -220,6 +229,7 @@ function _Player() {
       stop: true,
       loop: true,
       file: false,
+      link: false,
       midi: true,
       close: false,
       connect: true
@@ -409,7 +419,28 @@ function _Player() {
   };
   Player.prototype.destroy = function(n) {
     this.stop();
+    if (this._out) this._out.close();
     this.gui.parentNode.removeChild(this.gui);
+  };
+
+  Player.prototype.setUrl = function(url, name) {
+    if (this.linkBtn) {
+      if (this._url) {
+        this.linkBtn.div.appendChild(this._url.firstChild);
+        this.linkBtn.div.removeChild(this._url);
+        this._url = undefined;
+      }
+      if (typeof url == 'undefined') this.linkBtn.disable();
+      else {
+        this.linkBtn.off();
+        this._url = document.createElement('a');
+        this._url.target = '_blank';
+        this._url.appendChild(this.linkBtn.div.firstChild);
+        this.linkBtn.div.appendChild(this._url);
+        this._url.href = url;
+        if (typeof name != 'undefined') this._url.download = name;
+      }
+    }
   };
 
   Player.prototype.readFile = function(f) {
@@ -423,6 +454,7 @@ function _Player() {
         var smf = new JZZ.MIDI.SMF(data);
         self.stop();
         JZZ.lib.schedule(function() { self.load(smf); });
+        if (self.linkBtn) self.setUrl('data:audio/midi;base64,' + JZZ.lib.toBase64(data), f.name);
       }
       catch (err) {}
     };
@@ -461,6 +493,7 @@ function _Player() {
       if (self._out) {
         if (self._playing) for (var c = 0; c < 16; c++) self._out._receive(JZZ.MIDI.allSoundOff(c));
         self._disconnect(self._out);
+        self._out.close();
       }
       self._out = this;
       self._connect(this);
