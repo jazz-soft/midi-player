@@ -154,10 +154,10 @@ var main = function() {
       div.style.borderStyle = 'none';
       div.style.cursor = 'default';
       parent.insertBefore(div, x.dom);
-      player = new JZZ.gui.Player(div);
+      player = new JZZ.gui.Player({ at: div, link: true });
     }
     else {
-      player = new JZZ.gui.Player();
+      player = new JZZ.gui.Player({ link: true, close: true });
     }
     parent.removeChild(x.dom);
     div = player.gui;
@@ -166,6 +166,7 @@ var main = function() {
       title = 'data:audio/midi';
       try {
         player.load(new JZZ.MIDI.SMF(JZZ.lib.fromBase64(x.src.substring(x.src.indexOf(',') + 1))));
+        player.setUrl(x.src, 'data');
         div.title = title;
         player.loop(x.loop);
         if (x.auto) player.play();
@@ -194,6 +195,7 @@ var main = function() {
             }
             try {
               player.load(new JZZ.MIDI.SMF(data));
+              player.setUrl(x.src);
               div.title = title;
               player.loop(x.loop);
               if (x.auto) player.play();
