@@ -1,4 +1,5 @@
 var main = function() {
+  var _data_ = /^data:/i;
   var _data = /^data:audio\/midi/i;
   var _mid = /\.mid$/i;
   var _midi = /\.midi$/i;
@@ -13,6 +14,7 @@ var main = function() {
   var __wav = 'audio/wav';
 
   var _all;
+  var _links = [];
   function isTrue(str) {
     if (str == '') return true;
     str = str.toLowerCase();
@@ -140,7 +142,120 @@ var main = function() {
         }
       }
     }
+    a = document.links;
+    for (i = 0; i < a.length; i++) if (a[i].href.match(_data) || a[i].href.match(_mid) || a[i].href.match(_midi) || a[i].href.match(_kar) || a[i].href.match(_rmi)) link(a[i]);
     _all = all;
+  }
+  function testMime(url, good, bad, ugly) {
+    if (url.match(_data_)) {
+      if (url.match(_data)) {
+        good();
+      }
+      else {
+        bad();
+      }
+    }
+    else {
+      var xhttp = new XMLHttpRequest();
+      var received = false;
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == this.HEADERS_RECEIVED || (this.readyState == this.DONE && !received)) {
+          received = true;
+          if (this.status == 200) {
+            var contentType = this.getResponseHeader("Content-Type");
+            if (contentType && contentType.match(__midi)) good();
+            else if (url.match(/^file:/i)) good();
+            else bad();
+          }
+          else ugly();
+          xhttp.abort();
+        }
+      };
+      xhttp.open('HEAD', url, true);
+      xhttp.send();
+    }
+  }
+  function load(player, url, play, loop) {
+    var isData = url.match(_data_);
+    var div = player.gui;
+    var title = isData ? 'data:audio/midi' : url;
+    player.setUrl(url, isData ? 'midi-player.mid' : undefined);
+    if (isData) {
+      try {
+        player.load(new JZZ.MIDI.SMF(JZZ.lib.fromBase64(url.substring(url.indexOf(',') + 1))));
+        div.title = title;
+        if (loop) player.loop(loop);
+        if (play) player.play();
+      }
+      catch (e) {
+        div.title = 'Cannot load ' + title;
+      }
+    }
+    else {
+      div.title = 'Loading ' + title;
+      var xhttp = new XMLHttpRequest();
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == this.DONE) {
+          if (this.status == 200) {
+            var r, i;
+            var data = '';
+            r = xhttp.response;
+            if (r instanceof ArrayBuffer) {
+              r = new Uint8Array(r);
+              for (i = 0; i < r.length; i++) data += String.fromCharCode(r[i]);
+            }
+            else {
+              r = xhttp.responseText;
+              for (i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
+            }
+            try {
+              player.load(new JZZ.MIDI.SMF(data));
+              div.title = title;
+              if (loop) player.loop(loop);
+              if (play) player.play();
+            }
+            catch (e) {
+              div.title = 'Cannot load ' + title;
+            }
+          }
+          else {
+            div.title = 'Cannot load ' + title;
+          }
+        }
+      };
+      try {
+        xhttp.responseType = 'arraybuffer';
+      }
+      catch (e) {}
+      xhttp.overrideMimeType('text/plain; charset=x-user-defined');
+      xhttp.open('GET', url, true);
+      xhttp.send();
+    }
+  }
+  function link(a) {
+    var busy = false;
+    _links.push(a);
+    var cancel = function() {
+      a.removeEventListener('click', listener);
+      a.click();
+    };
+    var proceed = function() {
+      var r = a.getBoundingClientRect();
+      var x = Math.round(r.left) - 32;
+      if (x < 0) x = 0;
+      var y = Math.round(r.top) - 32;
+      if (y < 0) y = 0;
+      player = new JZZ.gui.Player({ link: true, close: true, x: x, y: y });
+      player.onClose = function() { busy = false; };
+      load(player, a.href, true);
+    }
+    var listener = function(e) {
+      e.preventDefault();
+      if (busy) return;
+      busy = true;
+      testMime(a.href, proceed, cancel, cancel);
+    };
+    a.addEventListener('click', listener);
   }
   function create(x) {
     var player;
@@ -160,63 +275,7 @@ var main = function() {
       player = new JZZ.gui.Player({ link: true, close: true });
     }
     parent.removeChild(x.dom);
-    div = player.gui;
-    var title = x.src;
-    if (title.match(_data)) {
-      title = 'data:audio/midi';
-      try {
-        player.load(new JZZ.MIDI.SMF(JZZ.lib.fromBase64(x.src.substring(x.src.indexOf(',') + 1))));
-        player.setUrl(x.src, 'data');
-        div.title = title;
-        player.loop(x.loop);
-        if (x.auto) player.play();
-      }
-      catch (e) {
-        div.title = 'Cannot load ' + title;
-      }
-    }
-    else {
-      div.title = 'Loading ' + title;
-
-      var xhttp = new XMLHttpRequest();
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4) {
-          if (this.status == 200) {
-            var r, i;
-            var data = '';
-            r = xhttp.response;
-            if (r instanceof ArrayBuffer) {
-              r = new Uint8Array(r);
-              for (i = 0; i < r.length; i++) data += String.fromCharCode(r[i]);
-            }
-            else {
-              r = xhttp.responseText;
-              for (i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
-            }
-            try {
-              player.load(new JZZ.MIDI.SMF(data));
-              player.setUrl(x.src);
-              div.title = title;
-              player.loop(x.loop);
-              if (x.auto) player.play();
-            }
-            catch (e) {
-              div.title = 'Cannot load ' + title;
-            }
-          }
-          else {
-            div.title = 'Cannot load ' + title;
-          }
-        }
-      };
-      try {
-        xhttp.responseType = 'arraybuffer';
-      }
-      catch (e) {}
-      xhttp.overrideMimeType('text/plain; charset=x-user-defined');
-      xhttp.open('GET', x.src, true);
-      xhttp.send();
-    }
+    load(player, x.src, x.auto, x.loop);
   }
   var init = function() {
     if (!window.JZZ) window.JZZ = _JZZ();
@@ -229,7 +288,7 @@ var main = function() {
   };
 
   search();
-  if (_all.length) init();
+  if (_all.length || _links.length) init();
   for (i = 0; i < _all.length; i++) create(_all[i]);
   _all = [];
 };

@@ -255,13 +255,13 @@ function _Player() {
     catch(e) {}
 
     if (arg.x != parseInt(arg.x) || arg.y != parseInt(arg.y)) {
-      arg.x = _floating * 45 + 5;
-      arg.y = _floating * 15 + 5;
+      arg.x = _floating * 15 + 5;
+      arg.y = _floating * 45 + 5;
       _floating++;
     }
     this.gui.style.position = 'fixed';
-    this.gui.style.top = arg.x + 'px';
-    this.gui.style.left = arg.y + 'px';
+    this.gui.style.top = arg.y + 'px';
+    this.gui.style.left = arg.x + 'px';
     this.gui.style.opacity = 0.9;
     var self = this;
     this.gui.addEventListener('mousedown', function(e) { self._startmove(e); });
@@ -417,10 +417,15 @@ function _Player() {
       }
     }
   };
-  Player.prototype.destroy = function(n) {
+  Player.prototype.onClose = function() {};
+  Player.prototype.destroy = function() {
     this.stop();
-    if (this._out) this._out.close();
+    if (this._out) {
+      var out = this._out;
+      JZZ.lib.schedule(function() { out.close(); });
+    }
     this.gui.parentNode.removeChild(this.gui);
+    this.onClose();
   };
 
   Player.prototype.setUrl = function(url, name) {
@@ -438,6 +443,8 @@ function _Player() {
         this._url.appendChild(this.linkBtn.div.firstChild);
         this.linkBtn.div.appendChild(this._url);
         this._url.href = url;
+        if (!this._url.dataset) this._url.dataset = {};
+        this._url.dataset.jzzGuiPlayer = true;
         if (typeof name != 'undefined') this._url.download = name;
       }
     }
