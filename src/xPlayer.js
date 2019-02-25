@@ -576,7 +576,7 @@ function _Player() {
 
   Player.prototype._mousedown = function(e) {
     if (_lftBtnDn(e) && this._player) {
-      e.preventDefault();
+      if (!this._more) e.preventDefault();
       this.caret.style.backgroundColor = '#ddd';
       this._wasPlaying = this._playing;
       this._player.pause();
@@ -586,7 +586,7 @@ function _Player() {
   };
   Player.prototype._startmove = function(e) {
     if (_lftBtnDn(e)) {
-      e.preventDefault();
+      if (!this._more) e.preventDefault();
       this._startX = parseInt(this.gui.style.left);
       this._startY = parseInt(this.gui.style.top);
       this._clickX = e.clientX;
@@ -612,6 +612,12 @@ function _Player() {
     }
   };
   Player.prototype._mousemove = function(e) {
+    if (this._more) {
+      this._startX = undefined;
+      this._startY = undefined;
+      this._clickX = undefined;
+      this._clickY = undefined;
+    }
     if (this._player && typeof this._caretX != 'undefined') {
       e.preventDefault();
       var to = this._caretPos + e.clientX - this._caretX;

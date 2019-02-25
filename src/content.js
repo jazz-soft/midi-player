@@ -143,7 +143,8 @@ var main = function() {
       }
     }
     a = document.links;
-    for (i = 0; i < a.length; i++) if (a[i].href.match(_data) || a[i].href.match(_mid) || a[i].href.match(_midi) || a[i].href.match(_kar) || a[i].href.match(_rmi)) link(a[i]);
+    var midisite = window.location.hostname.match(/midi/i);
+    for (i = 0; i < a.length; i++) if (midisite || a[i].href.match(_data) || a[i].href.match(_mid) || a[i].href.match(_midi) || a[i].href.match(_kar) || a[i].href.match(_rmi)) link(a[i]);
     _all = all;
   }
   function testMime(url, good, bad, ugly) {
@@ -163,7 +164,9 @@ var main = function() {
           received = true;
           if (this.status == 200) {
             var contentType = this.getResponseHeader("Content-Type");
+            var contentDisposition = this.getResponseHeader("Content-Disposition");
             if (contentType && contentType.match(__midi)) good();
+            else if (contentDisposition && contentDisposition.match(/\.(midi?|kar|rmi)"?$/i)) good();
             else if (url.match(/^file:/i)) good();
             else bad();
           }
@@ -233,6 +236,7 @@ var main = function() {
     }
   }
   function link(a) {
+    if (a.dataset && a.dataset.jzzGuiPlayer) return;
     var busy = false;
     _links.push(a);
     var cancel = function() {
