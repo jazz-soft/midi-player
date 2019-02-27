@@ -1,7 +1,7 @@
 function _JZZ() {
 
   var _scope = typeof window === 'undefined' ? global : window;
-  var _version = '0.6.8';
+  var _version = '0.6.9';
   var i, j, k, m, n;
 
   var _time = Date.now || function () { return new Date().getTime(); };
@@ -1534,7 +1534,7 @@ function _JZZ() {
         81: _helperSMF.smfTempo,
         84: _helperSMF.smfSMPTE,
         88: _helperSMF.smfTimeSignature,
-        89: _helperSMF.smfKeySignature,
+        89: function(dd) { if (dd.length == 2) return _smf(89, dd); throw RangeError('Incorrect key signature: ' + _smftxt(dd)); },
         127: _helperSMF.smfMetaEvent
       }[ff];
       return f ? f(typeof dd == 'undefined' ? '' : _8bs(dd)) : _smf(ff, dd);

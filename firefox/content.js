@@ -1,13 +1,8 @@
 var main = function() {
   var _data_ = /^data:/i;
   var _data = /^data:audio\/midi/i;
-  var _mid = /\.mid$/i;
-  var _midi = /\.midi$/i;
-  var _kar = /\.kar$/i;
-  var _rmi = /\.rmi$/i;
-  var _mp3 = /\.mp3$/i;
-  var _wav = /\.wav$/i;
-  var _ogg = /\.ogg$/i;
+  var _midi_kar_rmi = /\.(midi?|kar|rmi)$/i;
+  var _mp3_wav_ogg = /\.(mp3|wav|ogg)$/i;
   var __midi = 'audio/midi';
   var __mpeg = 'audio/mpeg';
   var __ogg = 'audio/ogg';
@@ -33,8 +28,8 @@ var main = function() {
     var n = getAttr(x, a);
     return n == parseInt(n) ? n : 0;
   }
-  function isMidi(s, t) { return s.match(_data) || s.match(_mid) || s.match(_midi) || s.match(_kar) || s.match(_rmi) || t ==__midi; }
-  function isAudio(s, t) { return s.match(_mp3) || s.match(_wav) || s.match(_ogg) || t == __mpeg || t == __wav || t == __ogg; }
+  function isMidi(s, t) { return s.match(_data) || s.match(_midi_kar_rmi) || t ==__midi; }
+  function isAudio(s, t) { return s.match(_mp3_wav_ogg) || t == __mpeg || t == __wav || t == __ogg; }
   function search() {
     var a, x, i, j, s, t, h, w;
     var all = [];
@@ -144,7 +139,7 @@ var main = function() {
     }
     a = document.links;
     var midisite = window.location.hostname.match(/midi/i);
-    for (i = 0; i < a.length; i++) if (midisite || a[i].href.match(_data) || a[i].href.match(_mid) || a[i].href.match(_midi) || a[i].href.match(_kar) || a[i].href.match(_rmi)) link(a[i]);
+    for (i = 0; i < a.length; i++) if (midisite || a[i].href.match(_data) || a[i].href.match(_midi_kar_rmi)) link(a[i]);
     _all = all;
   }
   function testMime(url, good, bad, ugly) {
@@ -163,10 +158,11 @@ var main = function() {
         if (this.readyState == this.HEADERS_RECEIVED || (this.readyState == this.DONE && !received)) {
           received = true;
           if (this.status == 200) {
-            var contentType = this.getResponseHeader("Content-Type");
-            var contentDisposition = this.getResponseHeader("Content-Disposition");
-            if (contentType && contentType.match(__midi)) good();
-            else if (contentDisposition && contentDisposition.match(/\.(midi?|kar|rmi)"?$/i)) good();
+            var type = this.getResponseHeader("Content-Type");
+            var disposition = this.getResponseHeader("Content-Disposition");
+            if (disposition && disposition[disposition.length - 1] == '"') disposition = disposition.substring(0, disposition.length - 1);
+            if (type && type.match(__midi)) good();
+            else if (disposition && disposition.match(_midi_kar_rmi)) good();
             else if (url.match(/^file:/i)) good();
             else bad();
           }
