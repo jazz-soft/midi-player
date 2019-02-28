@@ -8,8 +8,6 @@ var main = function() {
   var __ogg = 'audio/ogg';
   var __wav = 'audio/wav';
 
-  var _all;
-  var _links = [];
   function isTrue(str) {
     if (str == '') return true;
     str = str.toLowerCase();
@@ -30,8 +28,10 @@ var main = function() {
   }
   function isMidi(s, t) { return s.match(_data) || s.match(_midi_kar_rmi) || t ==__midi; }
   function isAudio(s, t) { return s.match(_mp3_wav_ogg) || t == __mpeg || t == __wav || t == __ogg; }
+
   function search() {
     var a, x, i, j, s, t, h, w;
+    var added = false;
     var all = [];
     var src;
     a = document.getElementsByTagName('BGSOUND');
@@ -139,8 +139,17 @@ var main = function() {
     }
     a = document.links;
     var midisite = window.location.hostname.match(/midi/i);
-    for (i = 0; i < a.length; i++) if (midisite || a[i].href.match(_data) || a[i].href.match(_midi_kar_rmi)) link(a[i]);
-    _all = all;
+    for (i = 0; i < a.length; i++) {
+      if (a[i].dataset && a[i].dataset.jzzGuiPlayer) continue;
+      if (!a[i].dataset) a[i].dataset = {};
+      a[i].dataset.jzzGuiPlayer = true;
+      if (midisite || a[i].href.match(_data) || a[i].href.match(_midi_kar_rmi)) {
+        added = true;
+        link(a[i]);
+      }
+    }
+    if (all.length || added) init();
+    for (i = 0; i < all.length; i++) create(all[i]);
   }
   function testMime(url, good, bad, ugly) {
     if (url.match(_data_)) {
@@ -232,9 +241,7 @@ var main = function() {
     }
   }
   function link(a) {
-    if (a.dataset && a.dataset.jzzGuiPlayer) return;
     var busy = false;
-    _links.push(a);
     var cancel = function() {
       a.removeEventListener('click', listener);
       a.click();
@@ -286,11 +293,8 @@ var main = function() {
     if (!JZZ.gui || !JZZ.gui.Player) _Player();
     init = function() {};
   };
-
   search();
-  if (_all.length || _links.length) init();
-  for (i = 0; i < _all.length; i++) create(_all[i]);
-  _all = [];
+  setInterval(search, 700);
 };
 
 if (document instanceof HTMLDocument) {
