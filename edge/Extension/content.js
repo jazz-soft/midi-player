@@ -294,7 +294,7 @@ var main = function() {
     init = function() {};
   };
   search();
-  setInterval(search, 700);
+  setInterval(search, 500);
 };
 
 if (document instanceof HTMLDocument) {

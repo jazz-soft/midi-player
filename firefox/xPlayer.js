@@ -10,6 +10,7 @@ function _Player() {
     this.div = document.createElement('div');
     this.div.style.display = 'inline-block';
     this.div.style.position = 'absolute';
+    this.div.style.boxSizing = 'content-box';
     this.div.style.top = '8px';
     this.div.style.margin = '0';
     this.div.style.padding = '2px';
@@ -53,6 +54,7 @@ function _Player() {
     self.gui = document.createElement('div');
     self.gui.style.display = 'inline-block';
     self.gui.style.position = 'relative';
+    self.gui.style.boxSizing = 'content-box';
     self.gui.style.margin = '0px';
     self.gui.style.padding = '0px';
     self.gui.style.borderStyle = 'none';
@@ -164,6 +166,7 @@ function _Player() {
       self.closeBtn = document.createElement('div');
       self.closeBtn.style.display = 'inline-block';
       self.closeBtn.style.position = 'absolute';
+      self.closeBtn.style.boxSizing = 'content-box';
       self.closeBtn.style.top = '1px';
       self.closeBtn.style.left = '262px';
       self.closeBtn.style.margin = '0';
@@ -184,6 +187,7 @@ function _Player() {
     self.rail = document.createElement('div');
     self.rail.style.display = 'inline-block';
     self.rail.style.position = 'absolute';
+    self.rail.style.boxSizing = 'content-box';
     self.rail.style.top = '19px';
     self.rail.style.left = (left + 5) + 'px';
     self.rail.style.width = self.rlen + 'px';
@@ -199,6 +203,7 @@ function _Player() {
     self.caret = document.createElement('div');
     self.caret.style.display = 'inline-block';
     self.caret.style.position = 'absolute';
+    self.caret.style.boxSizing = 'content-box';
     self.caret.style.width = '2px';
     self.caret.style.height = '2px';
     self.caret.style.top = '-5px';
