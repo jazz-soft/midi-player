@@ -239,7 +239,7 @@ function _Player() {
       close: false,
       connect: true
     };
-    for (var k in arg) if (arg.hasOwnProperty(k) && typeof x[k] != 'undefined') arg[k] = x[k];
+    if (typeof x == 'object') for (var k in arg) if (arg.hasOwnProperty(k) && typeof x[k] != 'undefined') arg[k] = x[k];
     if (typeof arg.at == 'undefined') arg.at = x;
     if (typeof arg.x == 'undefined') arg.x = x;
     if (typeof arg.y == 'undefined') arg.y = y;
