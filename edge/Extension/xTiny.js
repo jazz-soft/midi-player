@@ -4,7 +4,7 @@ function _Tiny() {
   if (!JZZ.synth) JZZ.synth = {};
   if (JZZ.synth.Tiny) return;
 
-  var _version = '1.0.7';
+  var _version = '1.0.8';
 
 function WebAudioTinySynth(opt){
   this.__proto__ = this.sy =
@@ -481,8 +481,11 @@ function WebAudioTinySynth(opt){
         nt.g[k].gain.cancelScheduledValues(0);
 
         nt.o[k].stop();
-        if(nt.o[k].detune)
-          this.chmod[nt.ch].disconnect(nt.o[k].detune);
+        if(nt.o[k].detune) {
+          try {
+            this.chmod[nt.ch].disconnect(nt.o[k].detune);
+          } catch (c) {}
+        }
         nt.g[k].gain.value = 0;
       }
     },
@@ -501,6 +504,7 @@ function WebAudioTinySynth(opt){
       }
     },
     _note:function(t,ch,n,v,p){
+      var self = this;
       var out,sc,pn;
       var o=[],g=[],vp=[],fp=[],r=[];
       var f=440*Math.pow(2,(n-69)/12);
@@ -556,9 +560,11 @@ function WebAudioTinySynth(opt){
         this._setParamTarget(g[i].gain,pn.s*vp[i],dt,pn.d);
         o[i].start(t);
         if(this.rhythm[ch]){
-
-          o[i].onended = function(){
-              this.chmod[ch].disconnect(o[i].detune);
+          // difference between '()=>' and 'function()' 
+          var _ch = ch;
+          var _oi = o[i];
+          o[i].onended = function() {
+              self.chmod[_ch].disconnect(_oi.detune);
           };
           o[i].stop(t+p[0].d*this.releaseRatio);
         }

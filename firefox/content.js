@@ -242,6 +242,7 @@ var main = function() {
   }
   function link(a) {
     var busy = false;
+    var player;
     var cancel = function() {
       a.removeEventListener('click', listener);
       a.click();
@@ -258,7 +259,10 @@ var main = function() {
     }
     var listener = function(e) {
       e.preventDefault();
-      if (busy) return;
+      if (busy) {
+        if (player) player.play();
+        return;
+      }
       busy = true;
       testMime(a.href, proceed, cancel, cancel);
     };
