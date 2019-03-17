@@ -2,7 +2,7 @@
 
 ## MIDI Player browser extension
 
-![MIDI Player](https://jazz-soft.github.io/img/jzzguiplayer.png)
+![MIDI Player](http://jazz-soft.github.io/img/midi-player-0-0-2-0.png)
 
 Playing MIDI files in `<audio>`, `<bgsound>`, `<object>`, `<embed>` tags.
 
