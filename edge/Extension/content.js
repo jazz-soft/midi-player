@@ -251,7 +251,9 @@ var main = function() {
       var r = a.getBoundingClientRect();
       var x = Math.round(r.left) - 32;
       if (x < 0) x = 0;
+      if (x > document.documentElement.clientWidth - 270) x = document.documentElement.clientWidth - 270;
       var y = Math.round(r.top) - 32;
+      if (y > document.documentElement.clientHeight - 40) y = document.documentElement.clientHeight - 40;
       if (y < 0) y = 0;
       player = new JZZ.gui.Player({ link: true, close: true, x: x, y: y });
       player.onClose = function() { busy = false; };

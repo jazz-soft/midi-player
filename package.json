@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "description": "MIDI player for browsers",
   "devDependencies": {
-    "grunt": "^1.0.3",
+    "grunt": "^1.0.4",
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-jshint": "^2.0.0",
     "jzz": "^0.7.1",
-    "jzz-gui-player": "^1.2.0",
+    "jzz-gui-player": "^1.2.1",
     "jzz-midi-smf": "^1.1.5",
     "jzz-synth-tiny": "^1.0.8"
   },
