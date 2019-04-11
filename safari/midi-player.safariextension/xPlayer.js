@@ -155,7 +155,7 @@ function _Player() {
       if (window.FileReader) {
         self.fileBtn.off();
         self.fileBtn.div.addEventListener('click', function() { self.fileInput.click(); });
-        self.fileInput.addEventListener('change', function(e) { _stopProp(e); self.readFile(e.target.files[0]); });
+        self.fileInput.addEventListener('change', function(e) { _stopProp(e); if (e.target.files[0]) self.readFile(e.target.files[0]); });
         self.gui.addEventListener('drop', function(e) { _stopProp(e); self.fileBtn.off(); self.readFile(e.dataTransfer.files[0]); });
         self.gui.addEventListener('dragover', function(e) { _stopProp(e); self.fileBtn.on(); e.dataTransfer.dropEffect = 'copy'; });
         self.gui.addEventListener('dragexit', function(e) { _stopProp(e); self.fileBtn.off(); });
@@ -474,7 +474,7 @@ function _Player() {
         JZZ.lib.schedule(function() { self.load(smf); });
         if (self.linkBtn) self.setUrl('data:audio/midi;base64,' + JZZ.lib.toBase64(data), f.name);
       }
-      catch (err) {}
+      catch (err) { console.log(err.message); }
     };
     reader.readAsArrayBuffer(f);
   };
