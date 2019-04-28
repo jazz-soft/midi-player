@@ -6,9 +6,9 @@
     "grunt": "^1.0.4",
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-jshint": "^2.1.0",
-    "jzz": "^0.7.3",
-    "jzz-gui-player": "^1.2.3",
-    "jzz-midi-smf": "^1.1.6",
+    "jzz": "^0.7.4",
+    "jzz-gui-player": "^1.2.4",
+    "jzz-midi-smf": "^1.1.9",
     "jzz-synth-tiny": "^1.0.9"
   },
   "private": true

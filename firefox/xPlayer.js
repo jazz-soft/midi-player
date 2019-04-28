@@ -305,6 +305,7 @@ function _Player() {
   Player.prototype.load = function(smf) {
     var self = this;
     this._player = smf.player();
+    this._player.trim();
     this._player.connect(this);
     this._player.onEnd = function() { self._onEnd(); };
     this.enable();
