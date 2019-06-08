@@ -2,7 +2,7 @@ function _SMF() {
 
   if (JZZ.MIDI.SMF) return;
 
-  var _ver = '1.1.9';
+  var _ver = '1.2.4';
 
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
@@ -156,7 +156,7 @@ function _SMF() {
     return ret;
   }
   SMF.prototype.validate = function() {
-    var i, j, k;
+    var i, k;
     var w = [];
     if (this._warn) for (i = 0; i < this._warn.length; i++) w.push(_copy(this._warn[i]));
     k = 0;
@@ -276,6 +276,7 @@ function _SMF() {
   };
 
   function Chunk(t, d, off) {
+    if (!(this instanceof Chunk)) return new Chunk(t, d, off);
     var i;
     if (this.sub[t]) return this.sub[t](t, d, off);
     if (typeof t != 'string' || t.length != 4) _error("Invalid chunk type: " + t);
@@ -323,6 +324,7 @@ function _SMF() {
   }
 
   function MTrk(s, off) {
+    if (!(this instanceof MTrk)) return new MTrk(s, off);
     this._orig = this;
     this._tick = 0;
     if(typeof s == 'undefined') {
@@ -446,6 +448,7 @@ function _SMF() {
       }
     }
     else {
+      //
     }
   }
   MTrk.prototype._validate = function(w, k) {
@@ -668,7 +671,6 @@ function _SMF() {
   Player.prototype.tick = function() {
     var t = _now();
     var e;
-    var evt;
     this._pos = this._p0 + (t - this._t0) * this.mul;
     for(; this._ptr < this._data.length; this._ptr++) {
       e = this._data[this._ptr];
@@ -800,7 +802,7 @@ function _SMF() {
   };
   Player.prototype._toPos = function() {
     for(this._ptr = 0; this._ptr < this._data.length; this._ptr++) {
-      e = this._data[this._ptr];
+      var e = this._data[this._ptr];
       if (e.tt >= this._pos) break;
       if (e.ff == 0x51 && this.ppqn) {
         this.mul = this.ppqn * 1000.0 / ((e.dd.charCodeAt(0) << 16) + (e.dd.charCodeAt(1) << 8) + e.dd.charCodeAt(2));

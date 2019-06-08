@@ -4,7 +4,7 @@ function _Tiny() {
   if (!JZZ.synth) JZZ.synth = {};
   if (JZZ.synth.Tiny) return;
 
-  var _version = '1.0.9';
+  var _version = '1.1.1';
 
 function WebAudioTinySynth(opt){
   this.__proto__ = this.sy =
