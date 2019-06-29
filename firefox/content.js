@@ -39,7 +39,7 @@ var main = function() {
       x = a[i];
       s = getAttr(x, 'src');
       w = getAttr(x, 'loop');
-      if (w.toLowerCase() == 'infinity') w = -1;
+      if (w.toLowerCase() == 'infinity' || w.toLowerCase() == 'infinite') w = -1;
       else if (w != parseInt(w) || w < 2) w = 0;
       if (isMidi(s)) {
         all.push({
