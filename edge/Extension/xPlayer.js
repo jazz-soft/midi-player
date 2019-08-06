@@ -589,6 +589,8 @@ function _Player() {
     }
   };
 
+  Player.prototype.speed = function(x) { return this._player ? this._player.speed(x) : 1; };
+
   // mouse dragging
   function _lftBtnDn(e) { return typeof e.buttons == 'undefined' ? !e.button : e.buttons & 1; }
 
