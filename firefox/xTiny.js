@@ -4,7 +4,7 @@ function _Tiny() {
   if (!JZZ.synth) JZZ.synth = {};
   if (JZZ.synth.Tiny) return;
 
-  var _version = '1.1.1';
+  var _version = '1.1.3';
 
 function WebAudioTinySynth(opt){
   this.__proto__ = this.sy =
@@ -429,6 +429,7 @@ function WebAudioTinySynth(opt){
       for(var i=0;i<16;++i){
         this.setProgram(i,0);
         this.setBendRange(i,0x100);
+        this.setModulation(i,0);
         this.setChVol(i,100);
         this.setPan(i,64);
         this.resetAllControllers(i);
@@ -733,6 +734,10 @@ function WebAudioTinySynth(opt){
       case 0x90: this.noteOn(ch,msg[1],msg[2],t); break;
       case 0x80: this.noteOff(ch,msg[1],t); break;
       case 0xf0:
+        if (msg[0] == 0xff) {
+          this.reset();
+          break;
+        }
         if(msg[0]!=254 && this.debug){
           var ds=[];
           for(var ii=0;ii<msg.length;++ii)
