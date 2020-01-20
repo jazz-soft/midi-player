@@ -31,8 +31,7 @@ You may also want to install
 [**Jazz-Plugin**](https://jazz-soft.net).  
 For Safari versions 12 and up: work in progress...
 
-
-## Microsoft EdgeHTML
+## Microsoft Edge Legacy
 [Get the **MIDI Player for Microsoft Edge** extension at **Microsoft Store**](https://www.microsoft.com/store/apps/9N1CMGX97PN1).  
 
 *Your comments and suggestions are [**welcome**](https://jazz-soft.org).  
