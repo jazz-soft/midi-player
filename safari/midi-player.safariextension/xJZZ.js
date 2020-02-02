@@ -1,7 +1,7 @@
 function _JZZ() {
 
   var _scope = typeof window === 'undefined' ? global : window;
-  var _version = '0.9.9';
+  var _version = '1.0.2';
   var i, j, k, m, n;
 
   var _time = Date.now || function () { return new Date().getTime(); };
@@ -826,7 +826,7 @@ function _JZZ() {
     _engine._closeOut = function(port) {
       var impl = port._impl;
       _pop(impl.clients, port._orig);
-      if (!impl.clients.length) {
+      if (!impl.clients.length && impl.open) {
         impl.open = false;
         impl.plugin.MidiOutClose();
       }
@@ -834,7 +834,7 @@ function _JZZ() {
     _engine._closeIn = function(port) {
       var impl = port._impl;
       _pop(impl.clients, port._orig);
-      if (!impl.clients.length) {
+      if (!impl.clients.length && impl.open) {
         impl.open = false;
         impl.plugin.MidiInClose();
       }
@@ -1130,7 +1130,7 @@ function _JZZ() {
     _engine._closeOut = function(port) {
       var impl = port._impl;
       _pop(impl.clients, port._orig);
-      if (!impl.clients.length) {
+      if (!impl.clients.length && impl.open) {
         impl.open = false;
         document.dispatchEvent(new CustomEvent('jazz-midi', { detail: ['closeout', impl.plugin.id] }));
       }
@@ -1138,7 +1138,7 @@ function _JZZ() {
     _engine._closeIn = function(port) {
       var impl = port._impl;
       _pop(impl.clients, port._orig);
-      if (!impl.clients.length) {
+      if (!impl.clients.length && impl.open) {
         impl.open = false;
         document.dispatchEvent(new CustomEvent('jazz-midi', { detail: ['closein', impl.plugin.id] }));
       }
@@ -2402,8 +2402,10 @@ function _JZZ() {
   }
 
   function _statechange(p, a) {
-    if (p.onstatechange) p.onstatechange(new MIDIConnectionEvent(p, p));
-    if (a.onstatechange) a.onstatechange(new MIDIConnectionEvent(p, a));
+    if (p) {
+      if (p.onstatechange) p.onstatechange(new MIDIConnectionEvent(p, p));
+      if (a.onstatechange) a.onstatechange(new MIDIConnectionEvent(p, a));
+    }
   }
 
   function MIDIInput(a, p) {
@@ -2526,7 +2528,7 @@ function _JZZ() {
           }).and(function() {
             self.proxy = this;
             self.proxy.connect(self.onmidi);
-            for (i = 0; i < self.pending; i++) self.pending[i][0]();
+            for (i = 0; i < self.pending.length; i++) self.pending[i][0]();
             self.pending = [];
           });
         }
