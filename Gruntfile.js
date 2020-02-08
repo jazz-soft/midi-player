@@ -40,6 +40,12 @@ module.exports = function(grunt) {
         cwd: 'src',
         src: '*.js',
         dest: 'safari/midi-player.safariextension'
+      },
+      safari12: {
+        expand: true,
+        cwd: 'src',
+        src: '*.js',
+        dest: 'safari/midi-player/extension'
       }
     }
   });
