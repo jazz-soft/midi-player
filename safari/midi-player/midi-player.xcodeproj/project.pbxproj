@@ -17,7 +17,6 @@
 		A2AF608323ED3B86000E163A /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = A2AF608123ED3B86000E163A /* MainMenu.xib */; };
 		A2AF609223ED3CF1000E163A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A2AF609123ED3CF1000E163A /* Cocoa.framework */; };
 		A2AF609523ED3CF1000E163A /* SafariExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2AF609423ED3CF1000E163A /* SafariExtensionHandler.swift */; };
-		A2AF609D23ED3CF2000E163A /* script.js in Resources */ = {isa = PBXBuildFile; fileRef = A2AF609C23ED3CF2000E163A /* script.js */; };
 		A2AF60A323ED3CF2000E163A /* extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A2AF608F23ED3CF1000E163A /* extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -61,7 +60,6 @@
 		A2AF609123ED3CF1000E163A /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		A2AF609423ED3CF1000E163A /* SafariExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariExtensionHandler.swift; sourceTree = "<group>"; };
 		A2AF609B23ED3CF2000E163A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A2AF609C23ED3CF2000E163A /* script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = script.js; sourceTree = "<group>"; };
 		A2AF60A023ED3CF2000E163A /* extension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = extension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -133,7 +131,6 @@
 				A277B04F23EE6DAA00DAA781 /* xTiny.js */,
 				A2AF609423ED3CF1000E163A /* SafariExtensionHandler.swift */,
 				A2AF609B23ED3CF2000E163A /* Info.plist */,
-				A2AF609C23ED3CF2000E163A /* script.js */,
 				A2AF60A023ED3CF2000E163A /* extension.entitlements */,
 			);
 			path = extension;
@@ -234,7 +231,6 @@
 				A277B05323EE6DAA00DAA781 /* xSMF.js in Resources */,
 				A277B05023EE6DAA00DAA781 /* content.js in Resources */,
 				A277B05223EE6DAA00DAA781 /* xPlayer.js in Resources */,
-				A2AF609D23ED3CF2000E163A /* script.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

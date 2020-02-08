@@ -50,10 +50,6 @@
 				<key>Script</key>
 				<string>content.js</string>
 			</dict>
-			<dict>
-				<key>Script</key>
-				<string>script.js</string>
-			</dict>
 		</array>
 		<key>SFSafariWebsiteAccess</key>
 		<dict>
