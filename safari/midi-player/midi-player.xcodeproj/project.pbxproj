@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A277B05023EE6DAA00DAA781 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = A277B04B23EE6DAA00DAA781 /* content.js */; };
+		A277B05123EE6DAA00DAA781 /* xJZZ.js in Resources */ = {isa = PBXBuildFile; fileRef = A277B04C23EE6DAA00DAA781 /* xJZZ.js */; };
+		A277B05223EE6DAA00DAA781 /* xPlayer.js in Resources */ = {isa = PBXBuildFile; fileRef = A277B04D23EE6DAA00DAA781 /* xPlayer.js */; };
+		A277B05323EE6DAA00DAA781 /* xSMF.js in Resources */ = {isa = PBXBuildFile; fileRef = A277B04E23EE6DAA00DAA781 /* xSMF.js */; };
+		A277B05423EE6DAA00DAA781 /* xTiny.js in Resources */ = {isa = PBXBuildFile; fileRef = A277B04F23EE6DAA00DAA781 /* xTiny.js */; };
 		A2AF607E23ED3B85000E163A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2AF607D23ED3B85000E163A /* AppDelegate.swift */; };
 		A2AF608023ED3B86000E163A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A2AF607F23ED3B86000E163A /* Assets.xcassets */; };
 		A2AF608323ED3B86000E163A /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = A2AF608123ED3B86000E163A /* MainMenu.xib */; };
@@ -41,6 +46,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A277B04B23EE6DAA00DAA781 /* content.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = content.js; sourceTree = "<group>"; };
+		A277B04C23EE6DAA00DAA781 /* xJZZ.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = xJZZ.js; sourceTree = "<group>"; };
+		A277B04D23EE6DAA00DAA781 /* xPlayer.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = xPlayer.js; sourceTree = "<group>"; };
+		A277B04E23EE6DAA00DAA781 /* xSMF.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = xSMF.js; sourceTree = "<group>"; };
+		A277B04F23EE6DAA00DAA781 /* xTiny.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = xTiny.js; sourceTree = "<group>"; };
 		A2AF607A23ED3B85000E163A /* midi-player.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "midi-player.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2AF607D23ED3B85000E163A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A2AF607F23ED3B86000E163A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -116,6 +126,11 @@
 		A2AF609323ED3CF1000E163A /* extension */ = {
 			isa = PBXGroup;
 			children = (
+				A277B04B23EE6DAA00DAA781 /* content.js */,
+				A277B04C23EE6DAA00DAA781 /* xJZZ.js */,
+				A277B04D23EE6DAA00DAA781 /* xPlayer.js */,
+				A277B04E23EE6DAA00DAA781 /* xSMF.js */,
+				A277B04F23EE6DAA00DAA781 /* xTiny.js */,
 				A2AF609423ED3CF1000E163A /* SafariExtensionHandler.swift */,
 				A2AF609B23ED3CF2000E163A /* Info.plist */,
 				A2AF609C23ED3CF2000E163A /* script.js */,
@@ -214,6 +229,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A277B05123EE6DAA00DAA781 /* xJZZ.js in Resources */,
+				A277B05423EE6DAA00DAA781 /* xTiny.js in Resources */,
+				A277B05323EE6DAA00DAA781 /* xSMF.js in Resources */,
+				A277B05023EE6DAA00DAA781 /* content.js in Resources */,
+				A277B05223EE6DAA00DAA781 /* xPlayer.js in Resources */,
 				A2AF609D23ED3CF2000E163A /* script.js in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

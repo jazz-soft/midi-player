@@ -1,10 +1,11 @@
 import Cocoa
+import SafariServices.SFSafariApplication
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
-    @IBOutlet weak var window: NSWindow!
     func applicationDidFinishLaunching(_ aNotification: Notification) {
-        // Insert code here to initialize your application
+        SFSafariApplication.showPreferencesForExtension(
+            withIdentifier: "Jazz-Soft.midi-player.extension",
+            completionHandler: { (_: Error?) -> Void in  sleep(1); NSApp.terminate(nil); });
     }
 }
-

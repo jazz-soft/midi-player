@@ -32,6 +32,26 @@
 		<array>
 			<dict>
 				<key>Script</key>
+				<string>xJZZ.js</string>
+			</dict>
+			<dict>
+				<key>Script</key>
+				<string>xTiny.js</string>
+			</dict>
+			<dict>
+				<key>Script</key>
+				<string>xSMF.js</string>
+			</dict>
+			<dict>
+				<key>Script</key>
+				<string>xPlayer.js</string>
+			</dict>
+			<dict>
+				<key>Script</key>
+				<string>content.js</string>
+			</dict>
+			<dict>
+				<key>Script</key>
 				<string>script.js</string>
 			</dict>
 		</array>
