@@ -60,6 +60,6 @@
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2020 Jazz-Soft. All rights reserved.</string>
 	<key>NSHumanReadableDescription</key>
-	<string>This is a Safari Extension. You should tell us what your extension does here.</string>
+	<string>This Extension plays all types of MIDI files in Safari.</string>
 </dict>
 </plist>
