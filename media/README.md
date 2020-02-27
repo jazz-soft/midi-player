@@ -22,3 +22,12 @@ free from typos and don't sound awkward.
 
 [**en (English)**](en.md)  
 [**ru (Russian)**](ru.md)  
+
+
+## Images
+
+#### midi-player-screenshot-272x42.png  
+![272x42](midi-player-screenshot-272x42.png)
+
+#### midi-player-screenshot-640x400.png  
+![640x400](midi-player-screenshot-640x400.png)
