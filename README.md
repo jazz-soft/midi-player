@@ -23,13 +23,15 @@ For better sound quality, you may also want to install
 [**Jazz-Plugin**](https://jazz-soft.net).
 
 ## Safari
+[Get the **MIDI Player** extension from **Apple App Store**](https://apps.apple.com/us/app/midi-player/id1507636491).  
+For better sound quality, you may also want to install
+[**Jazz-MIDI**](https://apps.apple.com/us/app/jazz-midi/id1506447231).
+
 For Safari v.11 and older:
 Apple have removed the old style extensions from the App Store,  
 but they can be installed from the [**source code**](safari/README.md), 
 or (for v.<9) downloaded from [**here**](https://jazz-soft.net/download/midi-player/midi-player.0.0.2.0.safariextz).  
 This extension requires [**Jazz-Plugin**](https://jazz-soft.net).
-
-For Safari versions 12 and up: work in progress...
 
 ## Microsoft Edge Legacy
 [Get the **MIDI Player for Microsoft Edge** extension at **Microsoft Store**](https://www.microsoft.com/store/apps/9N1CMGX97PN1).  
