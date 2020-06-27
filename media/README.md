@@ -59,3 +59,6 @@ free from typos and don't sound awkward.
 
 #### midi-player-screenshot-640x400.png  
 ![640x400](midi-player-screenshot-640x400.png)
+
+#### safari-install-2560-1600.png
+![safari-install-2560-1600](safari-install-2560-1600.png)
