@@ -185,6 +185,20 @@ function _Player() {
 
     self.rlen = right - left + 10;
 
+    self.lbl = document.createElement('div');
+    self.lbl.style.display = 'inline-block';
+    self.lbl.style.position = 'absolute';
+    self.lbl.style.top = '26px';
+    self.lbl.style.left = left + 'px';
+    self.lbl.style.width = (self.rlen + 10) + 'px';
+    self.lbl.style.height = '12px';
+    self.lbl.style.padding = '0';
+    self.lbl.style.textAlign = 'center';
+    self.lbl.style.color = '#aaa';
+    self.lbl.style.fontSize = '12px';
+    self.lbl.style.fontFamily = 'Arial, Helvetica, sans-serif';
+    self.gui.appendChild(self.lbl);
+
     self.rail = document.createElement('div');
     self.rail.style.display = 'inline-block';
     self.rail.style.position = 'absolute';
@@ -280,6 +294,9 @@ function _Player() {
   Player.prototype = new JZZ.Widget();
   Player.prototype.constructor = Player;
 
+  Player.prototype.label = function(html) {
+    this.lbl.innerHTML = html;
+  };
   Player.prototype.disable = function() {
     this.playBtn.disable();
     this.pauseBtn.disable();
@@ -308,8 +325,13 @@ function _Player() {
     this._player.trim();
     this._player.connect(this);
     this._player.onEnd = function() { self._onEnd(); };
+    this._player.filter(this._setfilter);
     this.enable();
     this.onLoad(smf);
+  };
+  Player.prototype.filter = function(f) {
+    this._setfilter = f instanceof Function ? f : undefined;
+    if (this._player) this._player.filter(this._setfilter);
   };
   Player.prototype.onEnd = function() {};
   Player.prototype.onLoad = function() {};
