@@ -188,7 +188,7 @@ var main = function() {
     var div = player.gui;
     var title = isData ? 'data:audio/midi' : url;
     player.setUrl(url, isData ? 'midi-player.mid' : undefined);
-    player.label('<a href="https://jazz-soft.net/download/midi-player" target="_blank" style="color:#aaa;">jazz-soft</a>');
+    player.label('<a href="https://jazz-soft.net/download/midi-player" title="info..." target="_blank" style="color:#aaa;">jazz-soft</a>');
     if (isData) {
       try {
         player.load(new JZZ.MIDI.SMF(JZZ.lib.fromBase64(url.substring(url.indexOf(',') + 1))));
