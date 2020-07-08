@@ -412,6 +412,7 @@ function _Player() {
   Player.prototype.onPause = function() {};
   Player.prototype.pause = function(p) {
     if (this._player) {
+      var self = this;
       if (this._paused) {
         if (typeof p == 'undefined' || p) {
           if (this._out) {
@@ -561,7 +562,8 @@ function _Player() {
     }
   };
   Player.prototype._selected = function() {
-    this.select(this.sel.options[this.sel.selectedIndex].value);
+    var selected = this.sel.options[this.sel.selectedIndex];
+    if (selected) this.select(selected.value);
   };
   Player.prototype._keydown = function(e) {
     if (e.keyCode == 13 || e.keyCode == 32) this._selected();

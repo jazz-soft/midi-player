@@ -4,7 +4,7 @@ function _Tiny() {
   if (!JZZ.synth) JZZ.synth = {};
   if (JZZ.synth.Tiny) return;
 
-  var _version = '1.1.6';
+  var _version = '1.1.7';
 
 function WebAudioTinySynth(opt){
   this.__proto__ = this.sy =
@@ -829,8 +829,6 @@ function WebAudioTinySynth(opt){
       }
       this.setReverbLev();
       this.reset();
-      this.send([0x90,60,1]);
-      this.send([0x90,60,0]);
     },
   }
 /* webaudio-tinysynth coreobject */
