@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "MIDI player for browsers",
   "devDependencies": {
-    "grunt": "^1.2.0",
+    "grunt": "^1.2.1",
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-jshint": "^2.1.0",
     "jzz": "^1.0.8",
