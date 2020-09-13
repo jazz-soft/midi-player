@@ -2,7 +2,7 @@ function _SMF() {
 
   if (JZZ.MIDI.SMF) return;
 
-  var _ver = '1.3.9';
+  var _ver = '1.4.0';
 
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
@@ -162,7 +162,7 @@ function _SMF() {
     k = 0;
     for (i = 0; i < this.length; i++) if (this[i] instanceof MTrk) {
       k++;
-      this[i]._validate(w, k);
+      this[i]._validate(w, k, this.type == 1 ? i : 0);
     }
     w.sort(function(a, b) {
       return (a.off || 0) - (b.off || 0) || (a.track || 0) - (b.track || 0) || (a.tick || 0) - (b.tick || 0);
@@ -405,7 +405,10 @@ function _SMF() {
     if (msg.dd.length < len) return _issue(msg._off, 'Invalid ' + name + ' meta event: ' + (msg.dd.length ? 'data too short' : 'no data'), msg.toString(), msg.tt);
     if (msg.dd.length > len) return _issue(msg._off, 'Invalid ' + name + ' meta event: data too long', msg.toString(), msg.tt);
   }
-  function _validate_midi(msg) {
+  function _timing_first_track(msg, name) {
+    return _issue(msg._off, name + ' meta events must be in the first track', msg.toString(), msg.tt);
+  }
+  function _validate_midi(msg, tr) {
     var issue;
     if (typeof msg.ff != 'undefined') {
       if (msg.ff > 0x7f) return _issue(msg._off, 'Invalid meta event', msg.toString(), msg.tt);
@@ -428,14 +431,17 @@ function _SMF() {
       }
       else if (msg.ff == 81) {
         issue = _metaevent_len(msg, 'Tempo', 3); if (issue) return issue;
+        if (tr) return _timing_first_track(msg, 'Tempo');
       }
       else if (msg.ff == 84) {
         issue = _metaevent_len(msg, 'SMPTE', 5); if (issue) return issue;
         if (msg.dd.charCodeAt(0) >= 24 || msg.dd.charCodeAt(1) >= 60 || msg.dd.charCodeAt(2) >= 60 || msg.dd.charCodeAt(3) >= 30 || msg.dd.charCodeAt(4) >= 200 || msg.dd.charCodeAt(4) % 25) return _issue(msg._off, 'Invalid SMPTE meta event: incorrect data', msg.toString(), msg.tt);
+        if (tr) return _timing_first_track(msg, 'SMPTE');
       }
       else if (msg.ff == 88) {
         issue = _metaevent_len(msg, 'Time Signature', 4); if (issue) return issue;
         if (msg.dd.charCodeAt(1) > 8) return _issue(msg._off, 'Invalid Time Signature meta event: incorrect data', msg.toString(), msg.tt);
+        if (tr) return _timing_first_track(msg, 'Time Signature');
       }
       else if (msg.ff == 89) {
         issue = _metaevent_len(msg, 'Key Signature', 2); if (issue) return issue;
@@ -452,7 +458,7 @@ function _SMF() {
       //
     }
   }
-  MTrk.prototype._validate = function(w, k) {
+  MTrk.prototype._validate = function(w, k, tr) {
     var i, z;
     if (this._warn) for (i = 0; i < this._warn.length; i++) {
       z = _copy(this._warn[i]);
@@ -460,7 +466,7 @@ function _SMF() {
       w.push(z);
     }
     for (i = 0; i < this.length; i++) {
-      z = _validate_midi(this[i]);
+      z = _validate_midi(this[i], tr);
       if (z) {
         z.track = k;
         w.push(z);
@@ -626,7 +632,6 @@ function _SMF() {
     return self;
   }
   Player.prototype.onEnd = function() {};
-  Player.prototype.onData = function() {};
   Player.prototype.loop = function(n) {
     if (n == parseInt(n) && n > 0) this._loop = n;
     else this._loop = n ? -1 : 0;
@@ -671,7 +676,7 @@ function _SMF() {
   };
   function _div(s) { return (s.charCodeAt(0) << 16) + (s.charCodeAt(1) << 8) + s.charCodeAt(2); }
   Player.prototype._receive = function(e) {
-    if (e.ff == 0x51 && this.ppqn && (this._type != 1 || e.track == 0)) {
+    if (e.ff == 0x51 && this.ppqn) {
       this._mul = this.ppqn * 1000.0 / _div(e.dd);
       this.mul = this._mul * this._speed;
       this._t0 = _now();
@@ -744,7 +749,7 @@ function _SMF() {
       this._ttt.push({ t: 0, m: m, ms: 0 });
       for (i = 0; i < this._data.length; i++) {
         e = this._data[i];
-        if (e.ff == 0x51 && (this.type != 1 || e.track == 0)) {
+        if (e.ff == 0x51) {
           this._durationMS += (e.tt - t) / m;
           t = e.tt;
           m = this.ppqn * 1000.0 / _div(e.dd);
