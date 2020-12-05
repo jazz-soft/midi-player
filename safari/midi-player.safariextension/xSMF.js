@@ -2,7 +2,7 @@ function _SMF() {
 
   if (JZZ.MIDI.SMF) return;
 
-  var _ver = '1.4.0';
+  var _ver = '1.4.2';
 
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
@@ -150,15 +150,22 @@ function _SMF() {
     if (p > s.length) this._complain(off + s.length, 'Incomplete data', p - s.length);
   };
 
-  function _copy(obj) {
-    var ret = {};
-    for (var k in obj) if (obj.hasOwnProperty(k)) ret[k] = obj[k];
-    return ret;
+  function Warn(obj) {
+    if (!(this instanceof Warn)) return new Warn(obj);
+    for (var k in obj) if (obj.hasOwnProperty(k)) this[k] = obj[k];
   }
+  Warn.prototype.toString = function() {
+    var a = [];
+    if (typeof this.off != 'undefined') a.push('offset ' + this.off);
+    if (typeof this.track != 'undefined') a.push('track ' + this.track);
+    if (typeof this.tick != 'undefined') a.push('tick ' + this.tick);
+    return a.join(' ') + ' -- ' + this.msg + ' (' + this.data + ')';
+  };
+
   SMF.prototype.validate = function() {
     var i, k;
     var w = [];
-    if (this._warn) for (i = 0; i < this._warn.length; i++) w.push(_copy(this._warn[i]));
+    if (this._warn) for (i = 0; i < this._warn.length; i++) w.push(Warn(this._warn[i]));
     k = 0;
     for (i = 0; i < this.length; i++) if (this[i] instanceof MTrk) {
       k++;
@@ -461,7 +468,7 @@ function _SMF() {
   MTrk.prototype._validate = function(w, k, tr) {
     var i, z;
     if (this._warn) for (i = 0; i < this._warn.length; i++) {
-      z = _copy(this._warn[i]);
+      z = Warn(this._warn[i]);
       z.track = k;
       w.push(z);
     }
@@ -469,7 +476,7 @@ function _SMF() {
       z = _validate_midi(this[i], tr);
       if (z) {
         z.track = k;
-        w.push(z);
+        w.push(Warn(z));
       }
     }
   };
@@ -513,33 +520,6 @@ function _SMF() {
     }
     return a.join('\n  ');
   };
-  function _eventOrder(msg) {
-    var x = {
-      0x00: 0,
-      0x03: 1,
-      0x02: 2,
-      0x54: 3,
-      0x51: 4,
-      0x58: 5,
-      0x59: 6,
-      0x20: 7,
-      0x21: 7,
-      0x06: 8,
-      0x04: 9,
-      0x01: 16,
-      0x05: 16,
-      0x7f: 17,
-      0x2f: 20
-    }[msg.ff];
-    if (typeof x !== 'undefined') return x;
-    if (msg.length) {
-      var s = msg[0] >> 4;
-      x = { 8: 10, 15: 11, 11: 12, 12: 13, 10: 15, 13: 15, 14: 15 }[s];
-      if (typeof x !== 'undefined') return x;
-      if (s == 9) return msg[1] ? 14 : 10;
-    }
-    return 18;
-  }
 
   MTrk.prototype.add = function(t, msg) {
     t = parseInt(t);
@@ -548,17 +528,15 @@ function _SMF() {
     msg.tt = t;
     if (this[this.length - 1].tt < t) this[this.length - 1].tt = t; // end of track
     if (msg.ff == 0x2f || msg[0] == 0xff) return this;
-    var x = _eventOrder(msg);
     var i;
-    for (i = 0; i < this.length; i++) {
+    for (i = 0; i < this.length - 1; i++) {
       if (this[i].tt > t) break;
-      if (this[i].tt == t && _eventOrder(this[i]) > x) break;
     }
     this.splice(i, 0, msg);
     return this;
   };
 
-  MTrk.prototype.send = function(msg) { this._orig.add(this._tick, msg); };
+  MTrk.prototype.send = function(msg) { this._orig.add(this._tick, msg); return this; };
   MTrk.prototype.tick = function(t) {
     if (t != parseInt(t) || t < 0) throw RangeError('Bad tick value: ' + t);
     if (!t) return this;
