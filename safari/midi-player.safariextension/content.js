@@ -3,7 +3,12 @@ var main = function() {
   var _data = /^data:audio\/midi/i;
   var _midi_kar_rmi = /\.(midi?|kar|rmi)$/i;
   var _mp3_wav_ogg = /\.(mp3|wav|ogg)$/i;
-  var __midi = 'audio/midi';
+  var __midi1 = 'audio/midi';
+  var __midi2 = 'audio/mid';
+  var __midi3 = 'audio/x-midi';
+  var __midi4 = 'audio/x-mid';
+  var __midi5 = 'midi/mid';
+  var __midi6 = 'application/x-midi';
   var __mpeg = 'audio/mpeg';
   var __ogg = 'audio/ogg';
   var __wav = 'audio/wav';
@@ -26,7 +31,10 @@ var main = function() {
     var n = getAttr(x, a);
     return n == parseInt(n) ? n : 0;
   }
-  function isMidi(s, t) { return s.match(_data) || s.match(_midi_kar_rmi) || t ==__midi; }
+  function isMidi(s, t) {
+    return s.match(_data) || s.match(_midi_kar_rmi) ||
+      t ==__midi1 || t ==__midi2 || t ==__midi3 || t ==__midi4 || t ==__midi5 || t ==__midi6;
+  }
   function isAudio(s, t) { return s.match(_mp3_wav_ogg) || t == __mpeg || t == __wav || t == __ogg; }
 
   function search() {
@@ -170,10 +178,20 @@ var main = function() {
             var type = this.getResponseHeader("Content-Type");
             var disposition = this.getResponseHeader("Content-Disposition");
             if (disposition && disposition[disposition.length - 1] == '"') disposition = disposition.substring(0, disposition.length - 1);
-            if (type && type.match(__midi)) good();
-            else if (disposition && disposition.match(_midi_kar_rmi)) good();
-            else if (url.match(/^file:/i)) good();
-            else bad();
+            if (type && (
+              type.match(__midi1) || type.match(__midi2) || type.match(__midi3) ||
+              type.match(__midi4) || type.match(__midi5) || type.match(__midi6))) {
+              good();
+            }
+            else if (disposition && disposition.match(_midi_kar_rmi)) {
+              good();
+            }
+            else if (url.match(/^file:/i)) {
+              good();
+            }
+            else {
+              bad();
+            }
           }
           else ugly();
           xhttp.abort();
