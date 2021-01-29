@@ -252,6 +252,7 @@ function _Player() {
       link: false,
       midi: true,
       close: false,
+      sndoff: true,
       ports: [undefined, /MIDI Through/i],
       connect: true
     };
@@ -264,6 +265,7 @@ function _Player() {
     arg.ports.push(undefined);
     this._ports = arg.ports;
     this._conn = arg.connect;
+    this._sndoff = arg.sndoff;
     this.disable();
 
     if (typeof arg.at == 'string') {
@@ -328,6 +330,7 @@ function _Player() {
     this._player.connect(this);
     this._player.onEnd = function() { self._onEnd(); };
     this._player.filter(this._setfilter);
+    if (!this._sndoff) this._player.sndOff = empty;
     this.enable();
     this.onLoad(smf);
   };
