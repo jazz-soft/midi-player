@@ -201,6 +201,23 @@ var main = function() {
       xhttp.send();
     }
   }
+  function decode(s) {
+    var n = s.indexOf(',') + 1;
+    if (s.substring(0, n).match(/;base64/i)) return JZZ.lib.fromBase64(s.substring(n));
+    var i, x, a = '';
+    for (i = n; i < s.length; i++) {
+      if (s[i] == '%') {
+        x = parseInt(s.substr(i + 1, 2), 16);
+        if (x >= 0 && x <= 255) {
+          a += String.fromCharCode(x);
+          i += 2;
+        }
+        else a += '%';
+      }
+      else a += s[i];
+    }
+    return a;
+  }
   function load(player, url, play, loop) {
     var isData = url.match(_data_);
     var div = player.gui;
@@ -209,7 +226,7 @@ var main = function() {
     player.label('<a href="https://jazz-soft.net/download/midi-player" title="info…" target="_blank" style="color:#aaa;">jazz-soft</a>');
     if (isData) {
       try {
-        player.load(new JZZ.MIDI.SMF(JZZ.lib.fromBase64(url.substring(url.indexOf(',') + 1))));
+        player.load(new JZZ.MIDI.SMF(decode(url)));
         div.title = title;
         if (loop) player.loop(loop);
         if (play) player.play();
