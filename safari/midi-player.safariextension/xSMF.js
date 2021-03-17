@@ -3,7 +3,7 @@ function _SMF() {
   /* istanbul ignore next */
   if (JZZ.MIDI.SMF) return;
 
-  var _ver = '1.4.8';
+  var _ver = '1.4.9';
 
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
@@ -246,17 +246,17 @@ function _SMF() {
 
   function _var2num(s) {
     if (!s.length) return 0; // missing last byte
-    if (s.charCodeAt(0) < 0x80) return s.charCodeAt(0);
+    if (s.charCodeAt(0) < 0x80) return [1, s.charCodeAt(0)];
     var x = s.charCodeAt(0) & 0x7f;
     x <<= 7;
-    if (s.charCodeAt(1) < 0x80) return x + s.charCodeAt(1);
+    if (s.charCodeAt(1) < 0x80) return [2, x + s.charCodeAt(1)];
     x += s.charCodeAt(1) & 0x7f;
     x <<= 7;
-    if (s.charCodeAt(2) < 0x80) return x + s.charCodeAt(2);
+    if (s.charCodeAt(2) < 0x80) return [3, x + s.charCodeAt(2)];
     x += s.charCodeAt(2) & 0x7f;
     x <<= 7;
     x += s.charCodeAt(3) & 0x7f;
-    return s.charCodeAt(3) < 0x80 ? x : -x;
+    return [4, s.charCodeAt(3) < 0x80 ? x : -x];
   }
   function _msglen(n) {
     switch (n & 0xf0) {
@@ -361,13 +361,23 @@ function _SMF() {
     }
     return x;
   }
-  function _validate_number(trk, s, off, t) {
-    var n = _var2num(s);
-    if (n < 0) {
-      n = -n;
+  function _validate_number(trk, s, off, t, tt) {
+    var nn = _var2num(s);
+    if (tt) t += nn[1];
+    if (nn[1] < 0) {
+      nn[1] = -nn[1];
       trk._complain(off, "Bad byte sequence", s.charCodeAt(0) + '/' + s.charCodeAt(1) + '/' + s.charCodeAt(2) + '/' + s.charCodeAt(3), t);
     }
-    return n;
+    else if (nn[0] == 4 && nn[1] < 0x200000) {
+      trk._complain(off, "Long VLQ value", s.charCodeAt(0) + '/' + s.charCodeAt(1) + '/' + s.charCodeAt(2) + '/' + s.charCodeAt(3), t);
+    }
+    else if (nn[0] == 3 && nn[1] < 0x4000) {
+      trk._complain(off, "Long VLQ value", s.charCodeAt(0) + '/' + s.charCodeAt(1) + '/' + s.charCodeAt(2), t);
+    }
+    else if (nn[0] == 2 && nn[1] < 0x80) {
+      trk._complain(off, "Long VLQ value", s.charCodeAt(0) + '/' + s.charCodeAt(1), t);
+    }
+    return nn;
   }
 
   function MTrk(s, off) {
@@ -381,19 +391,15 @@ function _SMF() {
     var t = 0;
     var p = 0;
     var w = '';
-    var d;
     var st;
     var m;
     var offset;
     off = off || 0;
     off += 8;
     while (p < s.length) {
-      d = _validate_number(this, s.substr(p, 4), offset, t + d);
-      p++;
-      if (d > 0x7f) p++;
-      if (d > 0x3fff) p++;
-      if (d > 0x1fffff) p++;
-      t += d;
+      m = _validate_number(this, s.substr(p, 4), offset, t, true);
+      p += m[0];
+      t += m[1];
       offset = p + off;
       if (s.charCodeAt(p) == 0xff) {
         st = s.substr(p, 2);
@@ -403,23 +409,17 @@ function _SMF() {
         }
         p += 2;
         m = _validate_number(this, s.substr(p, 4), offset + 2, t);
-        p++;
-        if (m > 0x7f) p++;
-        if (m > 0x3fff) p++;
-        if (m > 0x1fffff) p++;
-        this.push (new Event(t, st, s.substr(p, m), offset));
-        p += m;
+        p += m[0];
+        this.push (new Event(t, st, s.substr(p, m[1]), offset));
+        p += m[1];
       }
       else if (s.charCodeAt(p) == 0xf0 || s.charCodeAt(p) == 0xf7) {
         st = s.substr(p, 1);
         p += 1;
         m = _validate_number(this, s.substr(p, 4), offset + 1, t);
-        p++;
-        if (m > 0x7f) p++;
-        if (m > 0x3fff) p++;
-        if (m > 0x1fffff) p++;
-        this.push(new Event(t, st, s.substr(p, m), offset));
-        p += m;
+        p += m[0];
+        this.push(new Event(t, st, s.substr(p, m[1]), offset));
+        p += m[1];
       }
       else if (s.charCodeAt(p) & 0x80) {
         w = s.substr(p, 1);
@@ -448,30 +448,38 @@ function _SMF() {
     for (var i = 0; i < this.length; i++) trk.push(new JZZ.MIDI(this[i]));
     return trk;
   };
+  function _shortmsg(msg) {
+    var s = msg.toString();
+    if (s.length > 80) {
+      s = s.substr(0, 78);
+      s = s.substr(0, s.lastIndexOf(' ')) + ' ...';
+    }
+    return s;
+  }
   function _metaevent_len(msg, name, len) {
-    if (msg.dd.length < len) return _issue(msg._off, 'Invalid ' + name + ' meta event: ' + (msg.dd.length ? 'data too short' : 'no data'), msg.toString(), msg.tt);
-    if (msg.dd.length > len) return _issue(msg._off, 'Invalid ' + name + ' meta event: data too long', msg.toString(), msg.tt);
+    if (msg.dd.length < len) return _issue(msg._off, 'Invalid ' + name + ' meta event: ' + (msg.dd.length ? 'data too short' : 'no data'), _shortmsg(msg), msg.tt);
+    if (msg.dd.length > len) return _issue(msg._off, 'Invalid ' + name + ' meta event: data too long', _shortmsg(msg), msg.tt);
   }
   function _timing_first_track(msg, name) {
-    return _issue(msg._off, name + ' meta events must be in the first track', msg.toString(), msg.tt);
+    return _issue(msg._off, name + ' meta events must be in the first track', _shortmsg(msg), msg.tt);
   }
   function _validate_midi(msg, tr) {
     var issue;
     if (typeof msg.ff != 'undefined') {
-      if (msg.ff > 0x7f) return _issue(msg._off, 'Invalid meta event', msg.toString(), msg.tt);
+      if (msg.ff > 0x7f) return _issue(msg._off, 'Invalid meta event', _shortmsg(msg), msg.tt);
       else if (msg.ff == 0) {
         issue = _metaevent_len(msg, 'Sequence Number', 2); if (issue) return issue;
       }
       else if (msg.ff < 10) {
-        if (!msg.dd.length) return _issue(msg._off, 'Invalid Text meta event: no data', msg.toString(), msg.tt);
+        if (!msg.dd.length) return _issue(msg._off, 'Invalid Text meta event: no data', _shortmsg(msg), msg.tt);
       }
       else if (msg.ff == 32) {
         issue = _metaevent_len(msg, 'Channel Prefix', 1); if (issue) return issue;
-        if (msg.dd.charCodeAt(0) > 15) return _issue(msg._off, 'Invalid Channel Prefix meta event: incorrect data', msg.toString(), msg.tt);
+        if (msg.dd.charCodeAt(0) > 15) return _issue(msg._off, 'Invalid Channel Prefix meta event: incorrect data', _shortmsg(msg), msg.tt);
       }
       else if (msg.ff == 33) {
         issue = _metaevent_len(msg, 'MIDI Port', 1); if (issue) return issue;
-        if (msg.dd.charCodeAt(0) > 127) return _issue(msg._off, 'Invalid MIDI Port meta event: incorrect data', msg.toString(), msg.tt);
+        if (msg.dd.charCodeAt(0) > 127) return _issue(msg._off, 'Invalid MIDI Port meta event: incorrect data', _shortmsg(msg), msg.tt);
       }
       else if (msg.ff == 47) {
         issue = _metaevent_len(msg, 'End of Track', 0); if (issue) return issue;
@@ -482,12 +490,12 @@ function _SMF() {
       }
       else if (msg.ff == 84) {
         issue = _metaevent_len(msg, 'SMPTE', 5); if (issue) return issue;
-        if (msg.dd.charCodeAt(0) >= 24 || msg.dd.charCodeAt(1) >= 60 || msg.dd.charCodeAt(2) >= 60 || msg.dd.charCodeAt(3) >= 30 || msg.dd.charCodeAt(4) >= 200 || msg.dd.charCodeAt(4) % 25) return _issue(msg._off, 'Invalid SMPTE meta event: incorrect data', msg.toString(), msg.tt);
+        if (msg.dd.charCodeAt(0) >= 24 || msg.dd.charCodeAt(1) >= 60 || msg.dd.charCodeAt(2) >= 60 || msg.dd.charCodeAt(3) >= 30 || msg.dd.charCodeAt(4) >= 200 || msg.dd.charCodeAt(4) % 25) return _issue(msg._off, 'Invalid SMPTE meta event: incorrect data', _shortmsg(msg), msg.tt);
         if (tr) return _timing_first_track(msg, 'SMPTE');
       }
       else if (msg.ff == 88) {
         issue = _metaevent_len(msg, 'Time Signature', 4); if (issue) return issue;
-        if (msg.dd.charCodeAt(1) > 8) return _issue(msg._off, 'Invalid Time Signature meta event: incorrect data', msg.toString(), msg.tt);
+        if (msg.dd.charCodeAt(1) > 8) return _issue(msg._off, 'Invalid Time Signature meta event: incorrect data', _shortmsg(msg), msg.tt);
         if (tr) return _timing_first_track(msg, 'Time Signature');
       }
       else if (msg.ff == 89) {
@@ -498,7 +506,7 @@ function _SMF() {
         // Sequencer Specific meta event
       }
       else {
-        return _issue(msg._off, 'Unknown meta event', msg.toString(), msg.tt);
+        return _issue(msg._off, 'Unknown meta event', _shortmsg(msg), msg.tt);
       }
     }
     else {
