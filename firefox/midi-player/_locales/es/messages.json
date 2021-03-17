@@ -1,0 +1,10 @@
+{
+  "extensionName": {
+    "message": "MIDI Player",
+    "description": "Name of the extension"
+  },
+  "extensionDescription": {
+    "message": "MIDI Player - reproduce todo tipo de archivos MIDI",
+    "description": "Description of the extension"
+  }
+}
