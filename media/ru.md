@@ -15,9 +15,9 @@ MIDI Player
 
 Оно находит и играет MIDI-файлы в гиперссылках и тагах &lt;audio&gt;/&lt;bgsound&gt;/&lt;object&gt;/&lt;embed&gt; на веб-страницах.
 
-For the best sound quality or for using external MIDI devices, you may want to install <a href=https://addons.mozilla.org/firefox/addon/jazz-midi>Jazz-MIDI</a> extension and <a href=https://jazz-soft.net>Jazz-Plugin</a>.
+Для лучшего качества звучания или вывода на внешние MIDI-устройства, возможно дополнительно установить расширение <a href=https://addons.mozilla.org/firefox/addon/jazz-midi>Jazz-MIDI</a> и <a href=https://jazz-soft.net>Jazz-Plugin</a>.
 
-Same-origin limitation: MIDI files must be located at the same domain with the referencing web page, or at the CORS-enabled server.
+Ограничение по Cross-Origin запросам: MIDI-файл должен находиться в том же домене, что и ссылающаяся на него страница, или на сервере, поддерживающем технологию CORS.
 
 Посмотреть исходный код и оставить замечания и предложения, можно на странице <a href=https://github.com/jazz-soft/midi-player>GutHub</a>.
 
@@ -28,8 +28,8 @@ Same-origin limitation: MIDI files must be located at the same domain with the r
 
 Оно находит и играет MIDI-файлы в гиперссылках и тагах <audio>/<bgsound>/<object>/<embed> на веб-страницах.
 
-For the best sound quality, you may want to install the Jazz-Plugin and the Jazz-MIDI extension.
+Для лучшего качества звучания возможно дополнительно установить Jazz-Plugin и расширение Jazz-MIDI.
 
-Same-origin limitation: MIDI files must be located at the same domain with the referencing web page, or at the CORS-enabled server.
+Ограничение по Cross-Origin запросам: MIDI-файл должен находиться в том же домене, что и ссылающаяся на него страница, или на сервере, поддерживающем технологию CORS.
 
 Посмотреть исходный код и оставить замечания и предложения, можно на странице GutHub: https://github.com/jazz-soft/midi-player
