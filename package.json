@@ -3,13 +3,13 @@
   "version": "0.0.0",
   "description": "MIDI player for browsers",
   "devDependencies": {
-    "grunt": "^1.3.0",
+    "grunt": "^1.4.1",
     "grunt-contrib-copy": "^1.0.0",
     "grunt-contrib-jshint": "^3.0.0",
-    "jzz": "^1.2.5",
-    "jzz-gui-player": "^1.4.7",
-    "jzz-midi-smf": "^1.4.9",
-    "jzz-synth-tiny": "^1.2.5"
+    "jzz": "^1.3.4",
+    "jzz-gui-player": "^1.5.0",
+    "jzz-midi-smf": "^1.5.3",
+    "jzz-synth-tiny": "^1.2.6"
   },
   "private": true
 }

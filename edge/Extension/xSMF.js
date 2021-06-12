@@ -3,7 +3,7 @@ function _SMF() {
   /* istanbul ignore next */
   if (JZZ.MIDI.SMF) return;
 
-  var _ver = '1.4.9';
+  var _ver = '1.5.3';
 
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
@@ -35,6 +35,13 @@ function _SMF() {
     if (arguments.length == 1) {
       if (arguments[0] instanceof SMF) {
         return arguments[0].copy();
+      }
+      if (arguments[0] instanceof SYX) {
+        self.type = 0;
+        self.ppqn = ppqn;
+        self.push(new MTrk());
+        for (var i = 0; i < arguments[0].length; i++) self[0].add(0, arguments[0][i]);
+        return self;
       }
       try {
         if (arguments[0] instanceof ArrayBuffer) {
@@ -275,7 +282,6 @@ function _SMF() {
     pl.ppqn = this.ppqn;
     pl.fps = this.fps;
     pl.ppf = this.ppf;
-    pl.ppf = this.ppf;
     var i;
     var j;
     var tt = [];
@@ -490,7 +496,8 @@ function _SMF() {
       }
       else if (msg.ff == 84) {
         issue = _metaevent_len(msg, 'SMPTE', 5); if (issue) return issue;
-        if (msg.dd.charCodeAt(0) >= 24 || msg.dd.charCodeAt(1) >= 60 || msg.dd.charCodeAt(2) >= 60 || msg.dd.charCodeAt(3) >= 30 || msg.dd.charCodeAt(4) >= 200 || msg.dd.charCodeAt(4) % 25) return _issue(msg._off, 'Invalid SMPTE meta event: incorrect data', _shortmsg(msg), msg.tt);
+        if ((msg.dd.charCodeAt(0) & 0x1f) >= 24 || msg.dd.charCodeAt(1) >= 60 || msg.dd.charCodeAt(2) >= 60 || msg.dd.charCodeAt(3) >= 30 || msg.dd.charCodeAt(4) >= 200 || msg.dd.charCodeAt(4) % 25) return _issue(msg._off, 'Invalid SMPTE meta event: incorrect data', _shortmsg(msg), msg.tt);
+        else if ((msg.dd.charCodeAt(0) >> 5) > 3) return _issue(msg._off, 'Invalid SMPTE meta event: incorrect format', msg.dd.charCodeAt(0) >> 5, msg.tt);
         if (tr) return _timing_first_track(msg, 'SMPTE');
       }
       else if (msg.ff == 88) {
@@ -574,13 +581,13 @@ function _SMF() {
     if(isNaN(t) || t < 0) _error('Invalid parameter');
     msg = JZZ.MIDI(msg);
     msg.tt = t;
-    if (this[this.length - 1].tt < t) this[this.length - 1].tt = t; // end of track
-    if (msg.ff == 0x2f || msg[0] == 0xff) return this;
+    if (this[this._orig.length - 1].tt < t) this[this._orig.length - 1].tt = t; // end of track
+    if (msg.ff == 0x2f || msg[0] > 0xf0 && msg[0] != 0xf7) return this;
     var i;
-    for (i = 0; i < this.length - 1; i++) {
-      if (this[i].tt > t) break;
+    for (i = 0; i < this._orig.length - 1; i++) {
+      if (this._orig[i].tt > t) break;
     }
-    this.splice(i, 0, msg);
+    this._orig.splice(i, 0, msg);
     return this;
   };
 
@@ -868,4 +875,152 @@ function _SMF() {
     return this._ms2t(t);
   };
   JZZ.MIDI.SMF = SMF;
+
+  function _not_a_syx() { _error('Not a SYX file'); }
+
+  function SYX(arg) {
+    var self = this instanceof SYX ? this : self = new SYX();
+    self._orig = self;
+    if (typeof arg != 'undefined') {
+      if (arg instanceof SMF) {
+        self.copy(arg.player()._data);
+        return self;
+      }
+      if (arg instanceof SYX) {
+        self.copy(arg);
+        return self;
+      }
+      try {
+        if (arg instanceof ArrayBuffer) {
+          arg = String.fromCharCode.apply(null, new Uint8Array(arg));
+        }
+      }
+      catch (err) {/**/}
+      try {
+        if (arg instanceof Uint8Array || arg instanceof Int8Array) {
+          arg = String.fromCharCode.apply(null, new Uint8Array(arg));
+        }
+      }
+      catch (err) {/**/}
+      try {
+        if (arg instanceof Buffer) {
+          arg = arg.toString('binary');
+        }
+      }
+      catch (err) {/**/}
+      if (typeof arg != 'string') {
+        arg = String.fromCharCode.apply(null, arg);
+      }
+      var x;
+      var msg = [];
+      var i = 0;
+      while (i < arg.length) {
+        if (arg.charCodeAt(i) != 0xf0) _not_a_syx();
+        while (i < arg.length) {
+          x = arg.charCodeAt(i);
+          msg.push(x);
+          if (x == 0xf7) {
+            self.push(JZZ.MIDI(msg));
+            msg = [];
+            break;
+          }
+          i++;
+        }
+        i++;
+      }
+      if (msg.length) _not_a_syx();
+      return self;
+    }
+    return self;
+  }
+  SYX.version = function() { return _ver; };
+  SYX.prototype = [];
+  SYX.prototype.constructor = SYX;
+
+  SYX.prototype.copy = function(data) {
+    for (var i = 0; i < data.length; i++) if (!data[i].isSMF()) {
+      if (data[i].isFullSysEx()) this.push(JZZ.MIDI(data[i]));
+      else _not_a_syx();
+    }
+  };
+  SYX.prototype.dump = function() {
+    var i, j, s = '';
+    for (i = 0; i < this.length; i++) for (j = 0; j < this[i].length; j++) s += String.fromCharCode(this[i][j]);
+    return s;
+  };
+  SYX.prototype.toBuffer = function() {
+    return Buffer.from(this.dump(), 'binary');
+  };
+  SYX.prototype.toUint8Array = function() {
+    var str = this.dump();
+    var buf = new ArrayBuffer(str.length);
+    var arr = new Uint8Array(buf);
+    for (var i = 0; i < str.length; i++) arr[i] = str.charCodeAt(i);
+    return arr;
+  };
+  SYX.prototype.toArrayBuffer = function() {
+    return this.toUint8Array().buffer;
+  };
+  SYX.prototype.toInt8Array = function() {
+    return new Int8Array(this.toArrayBuffer());
+  };
+  SYX.prototype.toString = function() {
+    var i;
+    var a = ['SYX:'];
+    for (i = 0; i < this.length; i++) {
+      a.push(this[i].toString());
+    }
+    return a.join('\n  ');
+  };
+  SYX.prototype.player = function() {
+    var pl = new Player();
+    pl.ppqn = 96;
+    var i;
+    for (i = 0; i < this.length; i++) {
+      var e = JZZ.MIDI(this[i]);
+      e.tt = 0;
+      pl._data.push(e);
+    }
+    pl._type = 0;
+    pl._tracks = 1;
+    pl._timing();
+    pl.sndOff = function() {};
+    return pl;
+  };
+
+  SYX.prototype._ch = undefined;
+  SYX.prototype._sxid = 0x7f;
+  SYX.prototype._image = function() {
+    var F = function() {}; F.prototype = this._orig;
+    var img = new F();
+    img._ch = this._ch;
+    img._sxid = this._sxid;
+    return img;
+  };
+  SYX.prototype.add = function(msg) {
+    msg = JZZ.MIDI(msg);
+    if (msg.isFullSysEx()) this._orig.push(msg);
+    return this;
+  };
+  SYX.prototype.send = function(msg) { return this.add(msg); };
+  SYX.prototype.sxId = function(id) {
+    if (typeof id == 'undefined') id = SYX.prototype._sxid;
+    if (id == this._sxid) return this;
+    if (id != parseInt(id) || id < 0 || id > 0x7f) throw RangeError('Bad MIDI value: ' + id);
+    var img = this._image();
+    img._sxid = id;
+    return img;
+  };
+  SYX.prototype.ch = function(c) {
+    if (c == this._ch || typeof c == 'undefined' && typeof this._ch == 'undefined') return this;
+    if (typeof c != 'undefined') {
+      if (c != parseInt(c) || c < 0 || c > 15) throw RangeError('Bad channel value: ' + c  + ' (must be from 0 to 15)');
+    }
+    var img = this._image();
+    img._ch = c;
+    return img;
+  };
+  JZZ.lib.copyMidiHelpers(SYX);
+
+  JZZ.MIDI.SYX = SYX;
 }
