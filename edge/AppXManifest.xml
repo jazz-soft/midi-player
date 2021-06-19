@@ -8,7 +8,7 @@
   <Identity
     Name="1969Jazz-Soft.MIDIPlayerforMicrosoftEdge"
     Publisher="CN=61405402-A8F8-475C-A200-4D11CB82A4B2"
-    Version="1.0.1.3"/>
+    Version="1.0.1.4"/>
 
   <Properties>
     <DisplayName>MIDI Player for Microsoft Edge</DisplayName>
