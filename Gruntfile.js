@@ -23,12 +23,6 @@ module.exports = function(grunt) {
       }
     },
     copy: {
-      edge: {
-        expand: true,
-        cwd: 'src',
-        src: '*.js',
-        dest: 'edge/Extension'
-      },
       firefox: {
         expand: true,
         cwd: 'src',
