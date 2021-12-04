@@ -4,23 +4,15 @@ module.exports = function(grunt) {
     jshint: {
       all: ['src/**/*.js']
     },
-    import: {
-      _JZZ: {
-        src: 'node_modules/jzz/javascript/JZZ.js',
-        dest: 'src/xJZZ.js'
-      },
-      _Tiny: {
-        src: 'node_modules/jzz-synth-tiny/javascript/JZZ.synth.Tiny.js',
-        dest: 'src/xTiny.js'
-      },
-      _SMF: {
-        src: 'node_modules/jzz-midi-smf/javascript/JZZ.midi.SMF.js',
-        dest: 'src/xSMF.js'
-      },
-      _Player: {
-        src: 'node_modules/jzz-gui-player/javascript/JZZ.gui.Player.js',
-        dest: 'src/xPlayer.js'
-      }
+    assemble: {
+      main: 'src/tools/main.js',
+      src: [
+        'node_modules/jzz/javascript/JZZ.js',
+        'node_modules/jzz-synth-tiny/javascript/JZZ.synth.Tiny.js',
+        'node_modules/jzz-midi-smf/javascript/JZZ.midi.SMF.js',
+        'node_modules/jzz-gui-player/javascript/JZZ.gui.Player.js'
+      ],
+      dest: 'src/inject.js'
     },
     copy: {
       firefox: {
@@ -39,6 +31,6 @@ module.exports = function(grunt) {
   });
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-jshint');
-  grunt.registerTask('import', require('./src/tools/import.js')(grunt));
-  grunt.registerTask('default', ['import', 'copy']);
+  grunt.registerTask('assemble', require('./src/tools/assemble.js')(grunt));
+  grunt.registerTask('default', ['assemble', 'copy']);
 };
