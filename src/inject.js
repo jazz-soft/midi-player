@@ -342,7 +342,7 @@
 function _JZZ() {
 
   var _scope = typeof window === 'undefined' ? global : window;
-  var _version = '1.4.6';
+  var _version = '1.4.7';
   var i, j, k, m, n;
 
   /* istanbul ignore next */
@@ -1933,9 +1933,15 @@ function _JZZ() {
     for (n = 0; n < 12; n++) {
       m = _noteMap[k] + n * 12;
       if (m > 127) break;
-      _noteNum[k + n] = m;
-      if (m > 0) { _noteNum[k + 'b' + n] = m - 1; _noteNum[k + 'bb' + n] = m - 2; }
-      if (m < 127) { _noteNum[k + '#' + n] = m + 1; _noteNum[k + '##' + n] = m + 2; }
+      _noteNum[k + n] = m; _noteNum[k + '♮' + n] = m;
+      if (m > 0) {
+        _noteNum[k + 'b' + n] = m - 1; _noteNum[k + '♭' + n] = m - 1;
+        _noteNum[k + 'bb' + n] = m - 2; _noteNum[k + '♭♭' + n] = m - 2; _noteNum[k + '𝄫' + n] = m - 2;
+      }
+      if (m < 127) {
+        _noteNum[k + '#' + n] = m + 1; _noteNum[k + '♯' + n] = m + 1;
+        _noteNum[k + '##' + n] = m + 2; _noteNum[k + '♯♯' + n] = m + 2; _noteNum[k + '𝄪' + n] = m + 2;
+      }
     }
   });
   for (n = 0; n < 128; n++) _noteNum[n] = n;
@@ -4821,7 +4827,7 @@ function _SMF() {
   /* istanbul ignore next */
   if (JZZ.MIDI.SMF) return;
 
-  var _ver = '1.6.4';
+  var _ver = '1.6.7';
 
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
@@ -5763,7 +5769,6 @@ function _SMF() {
   Player.prototype.trim = function() {
     var i, j, e;
     var data = [];
-    var dt = 0;
     j = 0;
     for (i = 0; i < this._data.length; i++) {
       e = this._data[i];
@@ -5771,14 +5776,14 @@ function _SMF() {
         for (; j <= i; j++) data.push(this._data[j]);
       }
     }
-    dt += this._data[i - 1].tt - this._data[j - 1].tt;
+    var dt = (i ? this._data[i - 1].tt : 0) - (j ? this._data[j - 1].tt : 0);
     this._data = data;
     this._timing();
     return dt;
   };
   Player.prototype._timing = function() {
     var i, m, t, e;
-    this._duration = this._data[this._data.length - 1].tt;
+    this._duration = this._data.length ? this._data[this._data.length - 1].tt : 0;
     this._ttt = [];
     if (this.ppqn) {
       this._mul = this.ppqn / 500.0; // 120 bpm
@@ -5950,6 +5955,7 @@ function _SMF() {
       else _not_a_syx();
     }
   };
+  SYX.prototype.validate = function() { return []; };
   SYX.prototype.dump = function() {
     var i, j, s = '';
     for (i = 0; i < this.length; i++) for (j = 0; j < this[i].length; j++) s += String.fromCharCode(this[i][j]);
