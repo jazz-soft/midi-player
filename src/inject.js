@@ -342,7 +342,7 @@
 function _JZZ() {
 
   var _scope = typeof window === 'undefined' ? global : window;
-  var _version = '1.5.0';
+  var _version = '1.7.8';
   var i, j, k, m, n;
 
   /* istanbul ignore next */
@@ -393,7 +393,7 @@ function _JZZ() {
     var self = this;
     var F = function() {}; F.prototype = self;
     var ret = new F();
-    ret.then = function(good, bad) { self._push(_then, [good, bad]); return this; };      
+    ret.then = function(good, bad) { self._push(_then, [good, bad]); return this; };
     return ret;
   };
   function _then(good, bad) {
@@ -516,6 +516,8 @@ function _JZZ() {
   var _ins = [];
   var _outsW = [];
   var _insW = [];
+  var _outsM = {};
+  var _insM = {};
 
   function _postRefresh() {
     _jzz._info.engine = _engine._type;
@@ -530,6 +532,7 @@ function _JZZ() {
     var i, x;
     for (i = 0; i < _engine._outs.length; i++) {
       x = _engine._outs[i];
+      if (_outsM[x.name]) continue;
       x.engine = _engine;
       _engine._allOuts[x.name] = x;
       _jzz._info.outputs.push({
@@ -543,6 +546,7 @@ function _JZZ() {
     }
     for (i = 0; i < _virtual._outs.length; i++) {
       x = _virtual._outs[i];
+      if (_outsM[x.name]) continue;
       _jzz._info.outputs.push({
         id: x.name,
         name: x.name,
@@ -554,6 +558,7 @@ function _JZZ() {
     }
     for (i = 0; i < _engine._ins.length; i++) {
       x = _engine._ins[i];
+      if (_insM[x.name]) continue;
       x.engine = _engine;
       _engine._allIns[x.name] = x;
       _jzz._info.inputs.push({
@@ -567,6 +572,7 @@ function _JZZ() {
     }
     for (i = 0; i < _virtual._ins.length; i++) {
       x = _virtual._ins[i];
+      if (_insM[x.name]) continue;
       _jzz._info.inputs.push({
         id: x.name,
         name: x.name,
@@ -728,7 +734,7 @@ function _JZZ() {
   _M.prototype._receive = function(msg) { this._emit(this._filter(msg)); };
   function _receive(msg) { if (!this._bad) this._receive(msg); }
   _M.prototype.send = function() {
-    this._push(_receive, [MIDI.apply(null, arguments)]);
+    this._push(_receive, [_midi.apply(null, arguments)]);
     return this._thenable();
   };
   _M.prototype.note = function(c, n, v, t) {
@@ -741,11 +747,15 @@ function _JZZ() {
     }
     return this._thenable();
   };
+  function _midi(msg) { return msg.isMidi2 ? new UMP(msg) : MIDI.apply(null, arguments); }
   _M.prototype._emit = function(msg) {
-    var i;
-    for (i = 0; i < this._handles.length; i++) this._handles[i].apply(this, [MIDI(msg)._stamp(this)]);
+    var i, m;
+    for (i = 0; i < this._handles.length; i++) {
+      m = _midi(msg);
+      this._handles[i].apply(this, [m._stamp(this)]);
+    }
     for (i = 0; i < this._outs.length; i++) {
-      var m = MIDI(msg);
+      m = _midi(msg);
       if (!m._stamped(this._outs[i])) this._outs[i].send(m._stamp(this));
     }
   };
@@ -779,16 +789,14 @@ function _JZZ() {
   };
   _M.prototype._image = function() {
     var dup = this._dup();
+    dup._gr = this._gr;
     dup._ch = this._ch;
     dup._sxid = this._sxid;
     dup._master = this._master;
     dup._band = this._band;
     return dup;
   };
-  _M.prototype._ch = undefined;
   _M.prototype._sxid = 0x7f;
-  _M.prototype._master = undefined;
-  _M.prototype._band = undefined;
 
   _M.prototype.sxId = function(id) {
     if (typeof id == 'undefined') id = _M.prototype._sxid;
@@ -808,6 +816,25 @@ function _JZZ() {
     img._band = undefined;
     this._push(_kick, [img]);
     return img._thenable();
+  };
+  _M.prototype.MIDI1 = function() {
+    var img = this._image();
+    img._ch = undefined;
+    img._sxid = _M.prototype._sxid;
+    img._master = undefined;
+    img._band = undefined;
+    this._push(_kick, [img]);
+    return img._thenable();
+  };
+  _M.prototype.MIDI2 = function() {
+    var img = this._image();
+    img._ch = undefined;
+    img._sxid = _M.prototype._sxid;
+    img._master = undefined;
+    img._band = undefined;
+    var m2 = new _M2(img);
+    this._push(_kick, [m2]);
+    return m2._thenable();
   };
 
   function _mpe(m, n) {
@@ -830,6 +857,55 @@ function _JZZ() {
     if (c != parseInt(c) || c < 0 || c > 15)
       throw RangeError('Bad channel value (must not be less than 0 or more than 15): ' + c);
   }
+
+  // _M2: MIDI 2.0 adaptor
+  function _M2(sink) {
+    _R.apply(this);
+    this._sink = sink;
+  }
+  _M2.prototype = new _R();
+  _M2.prototype._sxid = _M.prototype._sxid;
+  _M2.prototype._receive = function(msg) { this._sink._receive(msg); };
+  function _midi2(msg) { return msg.isMidi && !msg.isMidi2 ? new MIDI(msg) : UMP.apply(null, arguments); }
+  _M2.prototype.send = function() {
+    this._push(_receive, [_midi2.apply(null, arguments)]);
+    return this._thenable();
+  };
+  _M2.prototype._image = _M.prototype._image;
+  _M2.prototype.connect = function(arg) {
+    this._sink.connect(arg);
+    this._push(_kick, [this._sink]);
+    return this._thenable();
+  };
+  _M2.prototype.disconnect = function(arg) {
+    this._sink.disconnect(arg);
+    this._push(_kick, [this._sink]);
+    return this._thenable();
+  };
+  _M2.prototype.connected = function() { return this._sink.connected(); };
+  _M2.prototype.sxId = _M.prototype.sxId;
+  _M2.prototype.ch = _M.prototype.ch;
+  _M2.prototype.gr = function(g) {
+    if (g == this._gr || typeof g == 'undefined' && typeof this._gr == 'undefined') return this._thenable();
+    var img = this._image();
+    if (typeof g != 'undefined') g = _7b(g);
+    img._gr = g;
+    this._push(_kick, [img]);
+    return img._thenable();
+  };
+  _M2.prototype.MIDI1 = function() {
+    var img = this._sink._image();
+    this._push(_kick, [img]);
+    return img._thenable();
+  };
+  _M2.prototype.MIDI2 = function() {
+    var img = this._image();
+    img._gr = undefined;
+    img._ch = undefined;
+    img._sxid = _M.prototype._sxid;
+    this._push(_kick, [img]);
+    return img._thenable();
+  };
 
   // _W: Watcher object ~ MIDIAccess.onstatechange
   function _W() {
@@ -900,8 +976,11 @@ function _JZZ() {
   // Node.js
   function _tryNODE() {
     if (typeof module != 'undefined' && module.exports) {
-      _initNode(require('jazz-midi'));
-      return;
+      var jazzmidi = require('jazz-midi');
+      if (jazzmidi) {
+        _initNode(jazzmidi);
+        return;
+      }
     }
     this._break();
   }
@@ -979,13 +1058,15 @@ function _JZZ() {
     var self = this;
     var inst;
     var msg;
-    function eventHandle() {
+    function eventHandle(evt) {
       inst = true;
-      if (!msg) msg = document.getElementById('jazz-midi-msg');
-      if (!msg) return;
-      var a = [];
-      try { a = JSON.parse(msg.innerText); } catch (err) {}
-      msg.innerText = '';
+      var a = evt.detail;
+      if (!a) {
+        if (!msg) msg = document.getElementById('jazz-midi-msg');
+        if (!msg) return;
+        try { a = JSON.parse(msg.innerText); } catch (err) {}
+        msg.innerText = '';
+      }
       document.removeEventListener('jazz-midi-msg', eventHandle);
       if (a[0] === 'version') {
         _initCRX(msg, a[2]);
@@ -996,9 +1077,12 @@ function _JZZ() {
       }
     }
     this._pause();
-    document.addEventListener('jazz-midi-msg', eventHandle);
-    try { document.dispatchEvent(new Event('jazz-midi')); } catch (err) {}
-    _schedule(function() { if (!inst) self._crash(); });
+    try {
+      document.addEventListener('jazz-midi-msg', eventHandle);
+      document.dispatchEvent(new Event('jazz-midi'));
+    }
+    catch (err) {}
+    setTimeout(function() { if (!inst) self._crash(); }, 50);
   }
 
   /* istanbul ignore next */
@@ -1510,13 +1594,16 @@ function _JZZ() {
       clearInterval(watcher);
       watcher = undefined;
     };
-    document.addEventListener('jazz-midi-msg', function() {
-      var v = _engine._msg.innerText.split('\n');
-      var impl, i, j;
-      _engine._msg.innerText = '';
+    document.addEventListener('jazz-midi-msg', function(evt) {
+      var i, j, impl;
+      var v = evt.detail ? [ evt.detail ] : undefined;
+      if (!v) {
+        v = _engine._msg.innerText.split('\n');
+        _engine._msg.innerText = '';
+        for (i = 0; i < v.length; i++) try { v[i] = JSON.parse(v[i]); } catch (err) { v[i] = []; }
+      }
       for (i = 0; i < v.length; i++) {
-        var a = [];
-        try { a = JSON.parse(v[i]); } catch (err) {}
+        var a = v[i];
         if (!a.length) continue;
         if (a[0] === 'refresh') {
           if (a[1].ins) {
@@ -1588,6 +1675,7 @@ function _JZZ() {
   }
   JZZ.Widget = Widget;
   _J.prototype.Widget = JZZ.Widget;
+
   JZZ.addMidiIn = function(name, widget) {
     var info = _clone(widget._info || {});
     info.name = name;
@@ -1606,6 +1694,7 @@ function _JZZ() {
     };
     return JZZ.lib.registerMidiIn(name, engine);
   };
+  _J.prototype.addMidiIn = JZZ.addMidiIn;
   JZZ.addMidiOut = function(name, widget) {
     var info = _clone(widget._info || {});
     info.name = name;
@@ -1624,6 +1713,15 @@ function _JZZ() {
     };
     return JZZ.lib.registerMidiOut(name, engine);
   };
+  _J.prototype.addMidiOut = JZZ.addMidiOut;
+  JZZ.maskMidiIn = function(name) { _insM[name] = true; };
+  _J.prototype.maskMidiIn = JZZ.maskMidiIn;
+  JZZ.unmaskMidiIn = function(name) { delete _insM[name]; };
+  _J.prototype.unmaskMidiIn = JZZ.unmaskMidiIn;
+  JZZ.maskMidiOut = function(name) { _outsM[name] = true; };
+  _J.prototype.maskMidiOut = JZZ.maskMidiOut;
+  JZZ.unmaskMidiOut = function(name) { delete _outsM[name]; };
+  _J.prototype.unmaskMidiOut = JZZ.unmaskMidiOut;
 
   // JZZ.SMPTE
 
@@ -1867,6 +1965,7 @@ function _JZZ() {
   }
   MIDI.prototype = [];
   MIDI.prototype.constructor = MIDI;
+  MIDI.prototype.isMidi = function() { return 1; };
   var _noteNum = {};
   MIDI.noteValue = function(x) { return typeof x == 'undefined' ? undefined : _noteNum[x.toString().toLowerCase()]; };
   MIDI.programValue = function(x) { return x; };
@@ -1949,11 +2048,14 @@ function _JZZ() {
   function _bad(x) { throw TypeError('Invalid value: ' + x); }
   function _oor(x) { throw RangeError('Out of range: ' + x); }
   function _ch(c) { _validateChannel(c); return parseInt(c); }
+  function _4b(n) { if (n != parseInt(n) || n < 0 || n > 0xf) throw RangeError('Expected a 4-bit value: ' + n); return parseInt(n); }
   function _7b(n, m) { if (n != parseInt(n) || n < 0 || n > 0x7f) _throw(typeof m == 'undefined' ? n : m); return parseInt(n); }
   function _8b(n) { if (n != parseInt(n) || n < 0 || n > 0xff) _throw(n); return parseInt(n); }
   function _14b(n) { if (n != parseInt(n) || n < 0 || n > 0x3fff) _throw(n); return parseInt(n); }
   function _16b(n) { if (n != parseInt(n) || n < 0 || n > 0xffff) throw RangeError('Expected a 16-bit value: ' + n); return parseInt(n); }
+  function _20b(n) { if (n != parseInt(n) || n < 0 || n > 0xfffff) throw RangeError('Expected a 20-bit value: ' + n); return parseInt(n); }
   function _21b(n) { if (n != parseInt(n) || n < 0 || n > 0x1fffff) _throw(n); return parseInt(n); }
+  function _32b(n) { if (n != parseInt(n) || n < 0 || n > 0xffffffff) _throw(n); return parseInt(n); }
   function _7bn(n) { return _7b(MIDI.noteValue(n), n); }
   function _lsb(n) { return _14b(n) & 0x7f; }
   function _msb(n) { return _14b(n) >> 7; }
@@ -2009,7 +2111,7 @@ function _JZZ() {
   var _helperMPE = {
     noteOff: function(c, n, v) { if (typeof v == 'undefined') v = 64; return [0x80 + _ch(c), _7bn(n), _7b(v)]; },
     noteOn: function(c, n, v) { if (typeof v == 'undefined') v = 127; return [0x90 + _ch(c), _7bn(n), _7b(v)]; },
-    aftertouch: function(c, n, v) { return [0xA0 + _ch(c), _7bn(n), _7b(v)]; },
+    aftertouch: function(c, n, v) { return [0xA0 + _ch(c), _7bn(n), _7b(v)]; }
   };
   var _helperCH = {
     control: function(c, n, v) { return [0xB0 + _ch(c), _7b(n), _7b(v)]; },
@@ -2065,17 +2167,18 @@ function _JZZ() {
     allNotesOff: function(c) { return [0xB0 + _ch(c), 0x7b, 0]; },
     omni: function(c, b) { if (typeof b == 'undefined') b = true; return [0xB0 + _ch(c), b ? 0x7d : 0x7c, 0]; },
     mono: function(c, n) { if (typeof n == 'undefined') n = 1; return [0xB0 + _ch(c), 0x7e, _7b(n)]; },
-    poly: function(c) { return [0xB0 + _ch(c), 0x7f, 0]; },
+    poly: function(c) { return [0xB0 + _ch(c), 0x7f, 0]; }
   };
   function _splitMasterTuning(a, b, c, d) {
     if (typeof b != 'undefined') return [_7b(a), _7b(b), _7b(c), _7b(d)];
-    if (a != parseInt(a) || a < 0 || n > 0xffff) _bad(a);
+    if (a != parseInt(a) || a < 0 || a > 0xffff) _bad(a);
     a = parseInt(a);
     return [(a >> 12) & 0xf, (a >> 8) & 0xf, (a >> 4) & 0xf, a & 0xf];
   }
-  function _gsxg12b(x) { // -1 <= x <= 1
+  function _gsxg16b(x) { // -1 <= x <= 1
     _float(x);
-    return Math.round(x * 1000 + 0x400);
+    x = Math.round(x * 0x10000 + 0x4000);
+    return x < 0 ? 0 : x > 0xffff ? 0xffff : x;
   }
   var _helperNC = { // no channel
     mtc: function(t) { return [0xF1, _mtc(t)]; },
@@ -2087,45 +2190,48 @@ function _JZZ() {
     continue: function() { return [0xFB]; },
     stop: function() { return [0xFC]; },
     active: function() { return [0xFE]; },
+    reset: function() { return [0xFF]; }
+  };
+  var _helperSX = { // SysEx
     sxIdRequest: function() { return [0xF0, 0x7E, this._sxid, 0x06, 0x01, 0xF7]; },
     sxTuningDumpRequest: function(n, k) { return typeof k == 'undefined' ?
       [0xF0, 0x7E, this._sxid, 0x08, 0x00, _7b(n), 0xF7] : [0xF0, 0x7E, this._sxid, 0x08, 0x03, _7b(n), _7b(k), 0xF7]; },
     sxFullFrame: function(t) { return [0xF0, 0x7F, this._sxid, 0x01, 0x01, _hrtype(t), t.getMinute(), t.getSecond(), t.getFrame(), 0xF7]; },
     sxMasterVolume: function(n, l) { return typeof l == 'undefined' ?
       [0xF0, 0x7F, this._sxid, 0x04, 0x01, _lsb(n), _msb(n), 0xF7] : [0xF0, 0x7F, this._sxid, 0x04, 0x01, _7b(l), _7b(n), 0xF7]; },
-    sxMasterVolumeF: function(x) { return _helperNC.sxMasterVolume.call(this, MIDI.to14b(_01(x))); },
+    sxMasterVolumeF: function(x) { return _helperSX.sxMasterVolume.call(this, MIDI.to14b(_01(x))); },
     sxMasterFineTuning: function(n, l) { return typeof l == 'undefined' ?
       [0xF0, 0x7F, this._sxid, 0x04, 0x03, _lsb(n), _msb(n), 0xF7] : [0xF0, 0x7F, this._sxid, 0x04, 0x03, _7b(l), _7b(n), 0xF7]; },
-    sxMasterFineTuningF: function(x) { return _helperNC.sxMasterFineTuning.call(this, MIDI.to14b(_01((x % 1 + 1) / 2, x))); },
+    sxMasterFineTuningF: function(x) { return _helperSX.sxMasterFineTuning.call(this, MIDI.to14b(_01((x % 1 + 1) / 2, x))); },
     sxMasterCoarseTuning: function(n) { return [0xF0, 0x7F, this._sxid, 0x04, 0x04, 0x00, _7b(n), 0xF7]; },
-    sxMasterCoarseTuningF: function(x) { return _helperNC.sxMasterCoarseTuning.call(this, 0x40 + (x - x % 1)); },
+    sxMasterCoarseTuningF: function(x) { return _helperSX.sxMasterCoarseTuning.call(this, 0x40 + (x - x % 1)); },
     sxNoteTuning: function(a, b, c, d) { return b == parseInt(b) ?
       [0xF0, _rt(d), this._sxid, 0x08, 0x07, _7b(a), _7b(b)].concat(_ntu(c), [0xF7]) :
       [0xF0, 0x7F, this._sxid, 0x08, 0x02, _7b(a)].concat(_ntu(b), [0xF7]); },
     sxNoteTuningF: function(a, b, c, d) { return b == parseInt(b) ?
-      _helperNC.sxNoteTuning.call(this, a, b, _f2ntu(c), d) : _helperNC.sxNoteTuning.call(this, a, _f2ntu(b)); },
+      _helperSX.sxNoteTuning.call(this, a, b, _f2ntu(c), d) : _helperSX.sxNoteTuning.call(this, a, _f2ntu(b)); },
     sxNoteTuningHZ: function(a, b, c, d) { return b == parseInt(b) ?
-      _helperNC.sxNoteTuning.call(this, a, b, _hz2ntu(c), d) : _helperNC.sxNoteTuning.call(this, a, _hz2ntu(b)); },
+      _helperSX.sxNoteTuning.call(this, a, b, _hz2ntu(c), d) : _helperSX.sxNoteTuning.call(this, a, _hz2ntu(b)); },
     sxScaleTuning1: function(a, b, c) { return a == parseInt(a) ?
       [0xF0, _rt(c), this._sxid, 0x08, 0x08].concat(_to777(_16b(a)), _12x7(b), [0xF7]) :
-      _helperNC.sxScaleTuning1.call(this, 0xffff, a, b); },
-    sxScaleTuning1F: function(a, b, c) { if (a != parseInt(a)) return _helperNC.sxScaleTuning1F.call(this, 0xffff, a, b);
+      _helperSX.sxScaleTuning1.call(this, 0xffff, a, b); },
+    sxScaleTuning1F: function(a, b, c) { if (a != parseInt(a)) return _helperSX.sxScaleTuning1F.call(this, 0xffff, a, b);
       var v = []; for (var i = 0; i < b.length; i++) {
         if (b[i] < -0.64 || b[i] > 0.63) throw RangeError('Out of range: ' + b[i]);
         v.push(Math.floor(b[i] * 100 + 64)); }
-      return _helperNC.sxScaleTuning1.call(this, a, v, c); },
+      return _helperSX.sxScaleTuning1.call(this, a, v, c); },
     sxScaleTuning2: function(a, b, c) { return a == parseInt(a) ?
       [0xF0, _rt(c), this._sxid, 0x08, 0x09].concat(_to777(_16b(a)), _12x14(b), [0xF7]) :
-      _helperNC.sxScaleTuning2.call(this, 0xffff, a, b); },
-    sxScaleTuning2F: function(a, b, c) { if (a != parseInt(a)) return _helperNC.sxScaleTuning2F.call(this, 0xffff, a, b);
+      _helperSX.sxScaleTuning2.call(this, 0xffff, a, b); },
+    sxScaleTuning2F: function(a, b, c) { if (a != parseInt(a)) return _helperSX.sxScaleTuning2F.call(this, 0xffff, a, b);
       var v = []; for (var i = 0; i < b.length; i++) {
         var x = (b[i] + 1) / 2;
         if (x < -1 || x > 1) throw RangeError('Out of range: ' + b[i]);
         v.push(MIDI.to14b((b[i] + 1) / 2)); }
-      return _helperNC.sxScaleTuning2.call(this, a, v, c); },
+      return _helperSX.sxScaleTuning2.call(this, a, v, c); },
     sxGM: function(gm) { if (typeof gm == 'undefined') gm = 1; return [0xF0, 0x7E, this._sxid, 0x09, gm ? gm == 2 ? 3 : 1 : 2, 0xf7]; },
     sxGS: function(arg) { var arr = typeof arg == 'undefined' ? [0x40, 0, 0x7F, 0] : arg instanceof Array ? arg : arguments;
-      var c = 0; var a = [0xF0, 0x41, this._sxid, 0x42, 0x12];
+      var c = 0; var a = [0xf0, 0x41, this._sxid, 0x42, 0x12];
       for (var i = 0; i < arr.length; i++) { var x = _7b(arr[i]); a.push(x); c += x; }
       c %= 128; a.push(c ? 128 - c : 0); a.push(0xf7); return a; },
     sxXG: function(arg) { var arr = typeof arg == 'undefined' ? [0, 0, 0x7E, 0] : arg instanceof Array ? arg : arguments;
@@ -2138,34 +2244,33 @@ function _JZZ() {
       s = typeof s == 'undefined' ? '' : '' + s;
       for (var i = 0; i < s.length; i++) a.push(_7b(s.charCodeAt(i)));
       a.push(0xf7); return a; },
-    gsMasterVolume: function(n) { return _helperNC.sxGS.call(this, [0x40, 0, 4, _7b(n)]); },
-    gsMasterVolumeF: function(x) { return _helperNC.gsMasterVolume.call(this, MIDI.to7b(_01(x))); },
-    gsMasterFineTuning: function(a, b, c, d) { a = _splitMasterTuning(a, b, c, d); return _helperNC.sxGS.call(this, [0x40, 0, 0, a[0], a[1], a[2], a[3]]); },
-    gsMasterFineTuningF: function(x) { return _helperNC.gsMasterFineTuning.call(this, _gsxg12b(x % 1)); },
-    gsMasterCoarseTuning: function(n) { return _helperNC.sxGS.call(this, [0x40, 0, 5, _7b(n)]); },
-    gsMasterCoarseTuningF: function(x) { return _helperNC.gsMasterCoarseTuning.call(this, 0x40 + (x - x % 1)); },
-    gsOctaveTuning: function(c, n, x) { return _helperNC.sxGS.call(this, [0x40, 0x10 + [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 11, 12, 13, 14, 15][_ch(c)], 0x40 + MIDI.octaveValue(n), _7b(x)]); },
+    gsMasterVolume: function(n) { return _helperSX.sxGS.call(this, [0x40, 0, 4, _7b(n)]); },
+    gsMasterVolumeF: function(x) { return _helperSX.gsMasterVolume.call(this, MIDI.to7b(_01(x))); },
+    gsMasterFineTuning: function(a, b, c, d) { a = _splitMasterTuning(a, b, c, d); return _helperSX.sxGS.call(this, [0x40, 0, 0, a[0], a[1], a[2], a[3]]); },
+    gsMasterFineTuningF: function(x) { return _helperSX.gsMasterFineTuning.call(this, _gsxg16b(x % 1)); },
+    gsMasterCoarseTuning: function(n) { return _helperSX.sxGS.call(this, [0x40, 0, 5, _7b(n)]); },
+    gsMasterCoarseTuningF: function(x) { return _helperSX.gsMasterCoarseTuning.call(this, 0x40 + (x - x % 1)); },
+    gsOctaveTuning: function(c, n, x) { return _helperSX.sxGS.call(this, [0x40, 0x10 + [1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 11, 12, 13, 14, 15][_ch(c)], 0x40 + MIDI.octaveValue(n), _7b(x)]); },
     gsOctaveTuningF: function(c, n, x) { if (x < -0.64 || x > 0.63) throw RangeError('Out of range: ' + x);
-      return _helperNC.gsOctaveTuning.call(this, c, n, Math.floor(x * 100 + 64)); },
-    xgMasterVolume: function(n) { return _helperNC.sxXG.call(this, [0, 0, 4, _7b(n)]); },
-    xgMasterVolumeF: function(x) { return _helperNC.xgMasterVolume.call(this, MIDI.to7b(_01(x))); },
-    xgMasterFineTuning: function(a, b, c, d) { a = _splitMasterTuning(a, b, c, d); return _helperNC.sxXG.call(this, [0, 0, 0, a[0], a[1], a[2], a[3]]); },
-    xgMasterFineTuningF: function(x) { return _helperNC.xgMasterFineTuning.call(this, _gsxg12b(x % 1)); },
-    xgMasterCoarseTuning: function(n) { return _helperNC.sxXG.call(this, [0, 0, 6, _7b(n)]); },
-    xgMasterCoarseTuningF: function(x) { return _helperNC.xgMasterCoarseTuning.call(this, 0x40 + (x - x % 1)); },
-    xgOctaveTuning: function(c, n, x) { return _helperNC.sxXG.call(this, [8, _ch(c), 0x41 + MIDI.octaveValue(n), _7b(x)]); },
+      return _helperSX.gsOctaveTuning.call(this, c, n, Math.floor(x * 100 + 64)); },
+    xgMasterVolume: function(n) { return _helperSX.sxXG.call(this, [0, 0, 4, _7b(n)]); },
+    xgMasterVolumeF: function(x) { return _helperSX.xgMasterVolume.call(this, MIDI.to7b(_01(x))); },
+    xgMasterFineTuning: function(a, b, c, d) { a = _splitMasterTuning(a, b, c, d); return _helperSX.sxXG.call(this, [0, 0, 0, a[0], a[1], a[2], a[3]]); },
+    xgMasterFineTuningF: function(x) { return _helperSX.xgMasterFineTuning.call(this, _gsxg16b(x % 1)); },
+    xgMasterCoarseTuning: function(n) { return _helperSX.sxXG.call(this, [0, 0, 6, _7b(n)]); },
+    xgMasterCoarseTuningF: function(x) { return _helperSX.xgMasterCoarseTuning.call(this, 0x40 + (x - x % 1)); },
+    xgOctaveTuning: function(c, n, x) { return _helperSX.sxXG.call(this, [8, _ch(c), 0x41 + MIDI.octaveValue(n), _7b(x)]); },
     xgOctaveTuningF: function(c, n, x) { if (x < -0.64 || x > 0.63) throw RangeError('Out of range: ' + x);
-      return _helperNC.xgOctaveTuning.call(this, c, n, Math.floor(x * 100 + 64)); },
-    reset: function() { return [0xFF]; },
+      return _helperSX.xgOctaveTuning.call(this, c, n, Math.floor(x * 100 + 64)); }
   };
-  _helperNC.sxScaleTuning = _helperNC.sxScaleTuning2;
-  _helperNC.sxScaleTuningF = _helperNC.sxScaleTuning2F;
-  _helperNC.sxMasterTranspose = _helperNC.sxMasterCoarseTuning;
-  _helperNC.sxMasterTransposeF = _helperNC.sxMasterCoarseTuningF;
-  _helperNC.gsMasterTranspose = _helperNC.gsMasterCoarseTuning;
-  _helperNC.gsMasterTransposeF = _helperNC.gsMasterCoarseTuningF;
-  _helperNC.xgMasterTranspose = _helperNC.xgMasterCoarseTuning;
-  _helperNC.xgMasterTransposeF = _helperNC.xgMasterCoarseTuningF;
+  _helperSX.sxScaleTuning = _helperSX.sxScaleTuning2;
+  _helperSX.sxScaleTuningF = _helperSX.sxScaleTuning2F;
+  _helperSX.sxMasterTranspose = _helperSX.sxMasterCoarseTuning;
+  _helperSX.sxMasterTransposeF = _helperSX.sxMasterCoarseTuningF;
+  _helperSX.gsMasterTranspose = _helperSX.gsMasterCoarseTuning;
+  _helperSX.gsMasterTransposeF = _helperSX.gsMasterCoarseTuningF;
+  _helperSX.xgMasterTranspose = _helperSX.xgMasterCoarseTuning;
+  _helperSX.xgMasterTransposeF = _helperSX.xgMasterCoarseTuningF;
   var _helperGCH = { // compound messages
     bank: function(c, m, l) { return typeof l == 'undefined' ?
       [_helperCH.bankMSB(c, _msb(m)), _helperCH.bankLSB(c, _lsb(m))] : [_helperCH.bankMSB(c, m), _helperCH.bankLSB(c, l)]; },
@@ -2219,24 +2324,24 @@ function _JZZ() {
     mode1: function(c) { return [ _helperCH.omni(c, true), _helperCH.poly(c) ]; },
     mode2: function(c) { return [ _helperCH.omni(c, true), _helperCH.mono(c) ]; },
     mode3: function(c) { return [ _helperCH.omni(c, false), _helperCH.poly(c) ]; },
-    mode4: function(c) { return [ _helperCH.omni(c, false), _helperCH.mono(c) ]; },
+    mode4: function(c) { return [ _helperCH.omni(c, false), _helperCH.mono(c) ]; }
   };
-  var _helperGNC = { // compound messages no channel
-    sxMasterTuning: function(n, m, l) { return [_helperNC.sxMasterCoarseTuning.call(this, n), _helperNC.sxMasterFineTuning.call(this, m, l)]; },
-    sxMasterTuningF: function(x) { return [_helperNC.sxMasterCoarseTuningF.call(this, x), _helperNC.sxMasterFineTuningF.call(this, x)]; },
-    gsMasterTuningF: function(x) { return [_helperNC.gsMasterCoarseTuningF.call(this, x), _helperNC.gsMasterFineTuningF.call(this, x)]; },
-    xgMasterTuningF: function(x) { return [_helperNC.xgMasterCoarseTuningF.call(this, x), _helperNC.xgMasterFineTuningF.call(this, x)]; },
-    sxMasterTuningA: function(a) { return _helperGNC.sxMasterTuningF.call(this, MIDI.shift(a)); },
-    gsMasterTuningA: function(a) { return _helperGNC.gsMasterTuningF.call(this, MIDI.shift(a)); },
-    xgMasterTuningA: function(a) { return _helperGNC.xgMasterTuningF.call(this, MIDI.shift(a)); },
+  var _helperSXX = { // compound messages no channel
+    sxMasterTuning: function(n, m, l) { return [_helperSX.sxMasterCoarseTuning.call(this, n), _helperSX.sxMasterFineTuning.call(this, m, l)]; },
+    sxMasterTuningF: function(x) { return [_helperSX.sxMasterCoarseTuningF.call(this, x), _helperSX.sxMasterFineTuningF.call(this, x)]; },
+    gsMasterTuningF: function(x) { return [_helperSX.gsMasterCoarseTuningF.call(this, x), _helperSX.gsMasterFineTuningF.call(this, x)]; },
+    xgMasterTuningF: function(x) { return [_helperSX.xgMasterCoarseTuningF.call(this, x), _helperSX.xgMasterFineTuningF.call(this, x)]; },
+    sxMasterTuningA: function(a) { return _helperSXX.sxMasterTuningF.call(this, MIDI.shift(a)); },
+    gsMasterTuningA: function(a) { return _helperSXX.gsMasterTuningF.call(this, MIDI.shift(a)); },
+    xgMasterTuningA: function(a) { return _helperSXX.xgMasterTuningF.call(this, MIDI.shift(a)); },
     gsScaleTuning: function(c, a) { var out = []; if (a.length != 12) throw RangeError('Wrong input size: ' + a.length);
-      for (var i = 0; i < 12; i++) out.push(_helperNC.gsOctaveTuning.call(this, c, i, a[i])); return out; },
+      for (var i = 0; i < 12; i++) out.push(_helperSX.gsOctaveTuning.call(this, c, i, a[i])); return out; },
     gsScaleTuningF: function(c, a) { var out = []; if (a.length != 12) throw RangeError('Wrong input size: ' + a.length);
-      for (var i = 0; i < 12; i++) out.push(_helperNC.gsOctaveTuningF.call(this, c, i, a[i])); return out; },
+      for (var i = 0; i < 12; i++) out.push(_helperSX.gsOctaveTuningF.call(this, c, i, a[i])); return out; },
     xgScaleTuning: function(c, a) { var out = []; if (a.length != 12) throw RangeError('Wrong input size: ' + a.length);
-      for (var i = 0; i < 12; i++) out.push(_helperNC.xgOctaveTuning.call(this, c, i, a[i])); return out; },
+      for (var i = 0; i < 12; i++) out.push(_helperSX.xgOctaveTuning.call(this, c, i, a[i])); return out; },
     xgScaleTuningF: function(c, a) { var out = []; if (a.length != 12) throw RangeError('Wrong input size: ' + a.length);
-      for (var i = 0; i < 12; i++) out.push(_helperNC.xgOctaveTuningF.call(this, c, i, a[i])); return out; },
+      for (var i = 0; i < 12; i++) out.push(_helperSX.xgOctaveTuningF.call(this, c, i, a[i])); return out; }
   };
   function _smf(ff, dd) {
     var midi = new MIDI();
@@ -2469,8 +2574,9 @@ function _JZZ() {
   }
 
   _for(_helperNC, function(n) { _copyHelperNC(n, _helperNC[n]); });
+  _for(_helperSX, function(n) { _copyHelperNC(n, _helperSX[n]); });
   _for(_helperSMF, function(n) { _copyHelperSMF(n, _helperSMF[n]); });
-  _for(_helperGNC, function(n) { _copyHelperGNC(n, _helperGNC[n]); });
+  _for(_helperSXX, function(n) { _copyHelperGNC(n, _helperSXX[n]); });
   _for(_helperMPE, function(n) { _copyHelperMPE(n, _helperMPE[n]); });
   _for(_helperCH, function(n) { _copyHelperCH(n, _helperCH[n]); });
   _for(_helperGCH, function(n) { _copyHelperGCH(n, _helperGCH[n]); });
@@ -2584,6 +2690,13 @@ function _JZZ() {
        return [this.dd.charCodeAt(0), 1 << this.dd.charCodeAt(1)];
     }
   };
+  MIDI.prototype.getTimeSignature4 = function() {
+    if (this.ff == 0x58 && typeof this.dd != 'undefined') {
+       var a = [this.dd.charCodeAt(0), 1 << this.dd.charCodeAt(1)];
+       if (this.dd.length == 4) a.push(this.dd.charCodeAt(2), this.dd.charCodeAt(3));
+       return a;
+    }
+  };
   MIDI.prototype.getKeySignature = function() {
     if (this.ff == 0x59 && typeof this.dd != 'undefined') {
       var sf = this.dd.charCodeAt(0);
@@ -2623,6 +2736,33 @@ function _JZZ() {
   };
   MIDI.prototype.isEOT = function() {
     return this.ff == 0x2f;
+  };
+  MIDI.prototype.isText = function() {
+    return this.ff == 1;
+  };
+  MIDI.prototype.isCopyright = function() {
+    return this.ff == 2;
+  };
+  MIDI.prototype.isSeqName = function() {
+    return this.ff == 3;
+  };
+  MIDI.prototype.isInstrName = function() {
+    return this.ff == 4;
+  };
+  MIDI.prototype.isLyric = function() {
+    return this.ff == 5;
+  };
+  MIDI.prototype.isMarker = function() {
+    return this.ff == 6;
+  };
+  MIDI.prototype.isCuePoint = function() {
+    return this.ff == 7;
+  };
+  MIDI.prototype.isProgName = function() {
+    return this.ff == 8;
+  };
+  MIDI.prototype.isDevName = function() {
+    return this.ff == 9;
   };
   MIDI.prototype.isTempo = function() {
     return this.ff == 0x51;
@@ -2682,10 +2822,16 @@ function _JZZ() {
   function __hex(x) { return (x < 16 ? '0' : '') + x.toString(16); }
   function _hex(x) {
     var a = [];
-    for (var i = 0; i < x.length; i++) {
-      a[i] = __hex(x[i]);
-    }
+    for (var i = 0; i < x.length; i++) a.push(__hex(x[i]));
     return a.join(' ');
+  }
+  function _hexx(x) {
+    var a = [];
+    for (var i = 0; i < x.length; i++) {
+      if (i && i % 4 == 0) a.push(' ');
+      a.push(__hex(x[i]));
+    }
+    return a.join('');
   }
   function _toLine(s) {
     var out = '';
@@ -2712,62 +2858,66 @@ function _JZZ() {
     return this.lbl ? this._str() + ' (' + this.lbl + ')' : this._str();
   };
   MIDI.prototype._str = function() {
-    var s;
+    var s, t;
+    if (!this.length) {
+      if (typeof this.ff == 'undefined') return 'empty';
+      s = 'ff' + __hex(this.ff);
+    }
+    else s = _hex(this);
+    t = this._string();
+    return t ? s + ' -- ' + t : s;
+  };
+  MIDI.prototype._string = function() {
+    var s = '';
     var ss;
     if (!this.length) {
-      if (typeof this.ff != 'undefined') {
-        s = 'ff' + __hex(this.ff) + ' -- ';
-        if (this.ff == 0) s += 'Sequence Number: ' + _s2n(this.dd);
-        else if (this.ff > 0 && this.ff < 10) s += ['', 'Text', 'Copyright', 'Sequence Name', 'Instrument Name', 'Lyric', 'Marker', 'Cue Point', 'Program Name', 'Device Name'][this.ff] + _smftxt(this.dd);
-        else if (this.ff == 32) s += 'Channel Prefix' + _smfhex(this.dd);
-        else if (this.ff == 33) s += 'MIDI Port' + _smfhex(this.dd);
-        else if (this.ff == 47) s += 'End of Track' + _smfhex(this.dd);
-        else if (this.ff == 81) {
-          var bpm = Math.round(this.getBPM() * 100) / 100;
-          s += 'Tempo: ' + bpm + ' bpm';
-        }
-        else if (this.ff == 84) s += 'SMPTE Offset: ' + _smptetxt(_s2a(this.dd));
-        else if (this.ff == 88) {
-          var d = 1 << this.dd.charCodeAt(1);
-          s += 'Time Signature: ' + this.dd.charCodeAt(0) + '/' + d;
-          s += ' ' + this.dd.charCodeAt(2) + ' ' + this.dd.charCodeAt(3);
-        }
-        else if (this.ff == 89) {
-          s += 'Key Signature: ';
-          var ks = this.getKeySignature();
-          if (ks) {
-            s += ks[1];
-            if (ks[2]) s += ' min';
-          }
-          else s+= 'invalid';
-        }
-        else if (this.ff == 127) {
-          if (this.dd.charCodeAt(0) == 0x43) {
-            if (this.dd.charCodeAt(1) == 0x7b) {
-              s += '[XF:' + __hex(this.dd.charCodeAt(2)) + ']';
-              ss = { 0: 'Version', 1: 'Chord', 2: 'Rehearsal Mark', 3: 'Phrase Mark', 4: 'Max Phrase Mark',
-                5: 'Fingering Number', 12: 'Guide Track Flag', 16: 'Guitar Info', 18: 'Chord Voicing',
-                127: 'XG Song Data Number' }[this.dd.charCodeAt(2)];
-              s += ss ? ' ' + ss : '';
-              s += ': ';
-              if (this.dd.charCodeAt(2) == 0) {
-                return s + this.dd.substr(3, 4) + ' ' + _hex(_s2a(this.dd.substr(7)));
-              }
-              if (this.dd.charCodeAt(2) == 1) {
-                return s + this.getText();
-              }
-              return s + _hex(_s2a(this.dd.substr(3)));
-            }
-          }
-          s += 'Sequencer Specific' + _smfhex(this.dd);
-        }
-        else s += 'SMF' + _smfhex(this.dd);
-        return s;
+      if (this.ff == 0) s += 'Sequence Number: ' + _s2n(this.dd);
+      else if (this.ff > 0 && this.ff < 10) s += ['', 'Text', 'Copyright', 'Sequence Name', 'Instrument Name', 'Lyric', 'Marker', 'Cue Point', 'Program Name', 'Device Name'][this.ff] + _smftxt(this.dd);
+      else if (this.ff == 32) s += 'Channel Prefix' + _smfhex(this.dd);
+      else if (this.ff == 33) s += 'MIDI Port' + _smfhex(this.dd);
+      else if (this.ff == 47) s += 'End of Track' + _smfhex(this.dd);
+      else if (this.ff == 81) {
+        var bpm = Math.round(this.getBPM() * 100) / 100;
+        s += 'Tempo: ' + bpm + ' bpm';
       }
-      return 'empty';
+      else if (this.ff == 84) s += 'SMPTE Offset: ' + _smptetxt(_s2a(this.dd));
+      else if (this.ff == 88) {
+        var d = 1 << this.dd.charCodeAt(1);
+        s += 'Time Signature: ' + this.dd.charCodeAt(0) + '/' + d;
+        s += ' ' + this.dd.charCodeAt(2) + ' ' + this.dd.charCodeAt(3);
+      }
+      else if (this.ff == 89) {
+        s += 'Key Signature: ';
+        var ks = this.getKeySignature();
+        if (ks) {
+          s += ks[1];
+          if (ks[2]) s += ' min';
+        }
+        else s+= 'invalid';
+      }
+      else if (this.ff == 127) {
+        if (this.dd.charCodeAt(0) == 0x43) {
+          if (this.dd.charCodeAt(1) == 0x7b) {
+            s += '[XF:' + __hex(this.dd.charCodeAt(2)) + ']';
+            ss = { 0: 'Version', 1: 'Chord', 2: 'Rehearsal Mark', 3: 'Phrase Mark', 4: 'Max Phrase Mark',
+              5: 'Fingering Number', 12: 'Guide Track Flag', 16: 'Guitar Info', 18: 'Chord Voicing',
+              127: 'XG Song Data Number' }[this.dd.charCodeAt(2)];
+            s += ss ? ' ' + ss : '';
+            s += ': ';
+            if (this.dd.charCodeAt(2) == 0) {
+              return s + this.dd.substr(3, 4) + ' ' + _hex(_s2a(this.dd.substr(7)));
+            }
+            if (this.dd.charCodeAt(2) == 1) {
+              return s + this.getText();
+            }
+            return s + _hex(_s2a(this.dd.substr(3)));
+          }
+        }
+        s += 'Sequencer Specific' + _smfhex(this.dd);
+      }
+      else s += 'SMF' + _smfhex(this.dd);
+      return s;
     }
-    s = _hex(this);
-    if (this[0] < 0x80) return s;
     ss = {
       241: 'MIDI Time Code',
       242: 'Song Position',
@@ -2784,16 +2934,16 @@ function _JZZ() {
       254: 'Active Sensing',
       255: 'Reset'
     }[this[0]];
-    if (ss) return s + ' -- ' + ss;
+    if (ss) return ss;
     if (this.isMidiSoft()) {
       ss = _toLine(this.getText());
       if (ss) ss = ' ' + ss;
-      return s + ' -- [K:' + __hex(this[5]) + ']' + ss;
+      return '[K:' + __hex(this[5]) + ']' + ss;
     }
     var c = this[0] >> 4;
     ss = {8: 'Note Off', 10: 'Aftertouch', 12: 'Program Change', 13: 'Channel Aftertouch', 14: 'Pitch Wheel'}[c];
-    if (ss) return s + ' -- ' + ss;
-    if (c == 9) return s + ' -- ' + (this[2] ? 'Note On' : 'Note Off');
+    if (ss) return ss;
+    if (c == 9) return this[2] ? 'Note On' : 'Note Off';
     if (c != 11) return s;
     ss = {
       0: 'Bank Select MSB',
@@ -2873,7 +3023,7 @@ function _JZZ() {
     }[this[1]];
     if (this[1] >= 64 && this[1] <= 69) ss += this[2] < 64 ? ' Off' : ' On';
     if (!ss) ss = 'Undefined';
-    return s + ' -- ' + ss;
+    return ss;
   };
   MIDI.prototype._stamp = function(obj) { this._from.push(obj._orig ? obj._orig : obj); return this; };
   MIDI.prototype._unstamp = function(obj) {
@@ -2904,8 +3054,8 @@ function _JZZ() {
     var b = typeof lsb == 'undefined' ? '??' : __hex(lsb);
     var c = {
       '0000': 'Pitch Bend Sensitivity',
-      '0001': 'Channel Fine Tune',
-      '0002': 'Channel Coarse Tune',
+      '0001': 'Channel Fine Tuning',
+      '0002': 'Channel Coarse Tuning',
       '0003': 'Select Tuning Program',
       '0004': 'Select Tuning Bank',
       '0005': 'Vibrato Depth Range',
@@ -3105,9 +3255,726 @@ function _JZZ() {
   };
   JZZ.MPE = MPE;
 
+  // JZZ.UMP
+
+  function UMP(arg) {
+    var self = this instanceof UMP ? this : self = new UMP();
+    var i;
+    if (arg instanceof UMP) {
+      self._from = arg._from.slice();
+      _for(arg, function(i) { if (i != '_from') self[i] = arg[i]; });
+      return self;
+    }
+    else self._from = [];
+    if (typeof arg == 'undefined') arg = [0, 0, 0, 0];
+    var arr = arg instanceof Array ? arg : arguments;
+    self.length = 0;
+    for (i = 0; i < arr.length; i++) {
+      n = arr[i];
+      if (n != parseInt(n) || n < 0 || n > 255) _throw(arr[i]);
+      self.push(n);
+    }
+    if (self.length != [4, 4, 4, 8, 8, 16, 4, 4, 8, 8, 8, 12, 12, 16, 16, 16][self[0] >> 4]) throw RangeError('Wrong UMP size');
+    return self;
+  }
+  UMP.prototype = [];
+  UMP.prototype.constructor = UMP;
+  UMP.prototype.isMidi = function() { return 2; };
+  UMP.prototype.isMidi2 = true;
+  UMP.prototype.dump = function() {
+    var i;
+    var s = '';
+    for (i = 0; i < this.length; i++) s += String.fromCharCode(this[i]);
+    return s;
+  };
+
+  function _UMP() {}
+  _UMP.prototype = UMP;
+  UMP._sxid = 0x7f;
+  UMP.sxId = function(id) {
+    if (typeof id == 'undefined') id = UMP._sxid;
+    if (id == this._sxid) return this;
+    id = _7b(id);
+    var ret = new _UMP();
+    ret._ch = this._ch;
+    ret._gr = this._gr;
+    ret._sxid = id;
+    return ret;
+  };
+  UMP.ch = function(c) {
+    if (c == this._ch || typeof c == 'undefined' && typeof this._ch == 'undefined') return this;
+    var ret = new _UMP();
+    if (typeof c != 'undefined') c = _ch(c);
+    ret._ch = c;
+    ret._gr = this._gr;
+    ret._sxid = this._sxid;
+    return ret;
+  };
+  UMP.gr = function(g) {
+    if (g == this._gr || typeof g == 'undefined' && typeof this._gr == 'undefined') return this;
+    var ret = new _UMP();
+    if (typeof g != 'undefined') g = _4b(g);
+    ret._ch = this._ch;
+    ret._gr = g;
+    ret._sxid = this._sxid;
+    return ret;
+  };
+  UMP.prototype.getGroup = function() {
+    if (!this[0]) return;
+    var m = this[0] >> 4;
+    if (m == 1 || m == 2 || m == 3 || m == 4 || m == 5 || m == 13) return this[0] & 15;
+  };
+  var _zeros = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  function _32a(a, b, c, d) {
+    if (typeof b != 'undefined') return [_8b(a), _8b(b), _8b(c), _8b(d)];
+    a = _32b(a);
+    return [(a >> 24) & 255, (a >> 16) & 255, (a >> 8) & 255, a & 255];
+  }
+  function _f_32(x) {
+    x = Math.floor(x * 0x100000000);
+    return x > 0xffffffff ? 0xffffffff : x < 0 ? 0 : x;
+  }
+  var _helperNN = {
+    noop: function() { return [0, 0, 0, 0]; },
+    umpClock: function(n) { n = _16b(n); return [0, 0x10, n >> 8, n & 0xff]; },
+    umpTimestamp: function(n) { n = _16b(n); return [0, 0x20, n >> 8, n & 0xff]; },
+    umpTicksPQN: function(n) { n = _16b(n); return [0, 0x30, n >> 8, n & 0xff]; },
+    umpDelta: function(n) { n = n || 0; n = _20b(n); return [0, 0x40 + (n >> 16), (n >> 8) & 0xff, n & 0xff]; },
+    umpStartClip: function() { return [0xf0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; },
+    umpEndClip: function() { return [0xf0, 0x21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; }
+  };
+  var _helperGN = {
+    umpTempo: function(g, n) { return [0xd0 + _4b(g), 0x10, 0, 0].concat(_32a(n), [0, 0, 0, 0, 0, 0, 0, 0]); },
+    umpBPM: function(g, n) { return _helperGN.umpTempo(g, Math.round(6000000000 / n)); },
+    umpTimeSignature: function(g, a, b) {
+      var nn, cc, dd;
+      var m = ('' + a ).match(/^\s*(\d+)\s*\/\s*(\d+)\s*$/);
+      if (m) {
+        nn = parseInt(m[1]);
+        cc = parseInt(m[2]);
+      }
+      else if (a == parseInt(a) && b == parseInt(b)) {
+        nn = parseInt(a);
+        cc = parseInt(b);
+      }
+      if (nn > 0 && nn < 0x100 && cc > 0 && !(cc & (cc - 1))) {
+        dd = 0;
+        for (cc >>= 1; cc; cc >>= 1) dd++;
+        cc = Math.round(nn * 32 / (1 << dd));
+        if (cc < 0x100) return [0xd0 + _4b(g), 0x10, 0, 1, nn, dd, cc, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      }
+      throw RangeError('Wrong time signature ' + a + (typeof b == 'undefined' ? '' : '/' + b));
+    }
+  };
+  var _helperGNX = {
+    umpMetadata: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 0, t); },
+    umpProjectName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 1, t); },
+    umpCompositionName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 2, t); },
+    umpClipName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 3, t); },
+    umpCopyright: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 4, t); },
+    umpComposerName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 5, t); },
+    umpLyricistName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 6, t); },
+    umpArrangerName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 7, t); },
+    umpPublisherName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 8, t); },
+    umpPerformerName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 9, t); },
+    umpAccPerformerName: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 10, t); },
+    umpRecordingDate: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 11, t); },
+    umpRecordingLocation: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 1, 12, t); },
+    umpText: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 2, 0, t); },
+    umpLyrics: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 2, 1, t); },
+    umpLyricsLanguage: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 2, 2, t); },
+    umpRuby: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 2, 3, t); },
+    umpRubyLanguage: function(g, t) { return _helperGCX.umpCustomText(g, 0, 1, 2, 4, t); }
+  };
+  var _noctrl = [0, 6, 32, 38, 98, 99, 100, 101];
+  var _helperGC = {
+    umpNoteOn: function(g, c, n, v, t, a) {
+      if (typeof v == 'undefined')  v = 0xffff;
+      t = t || 0; a = a || 0;
+      v = _16b(v); a = _16b(a);
+      return [0x40 + _4b(g), 0x90 + _ch(c), _7bn(n), _8b(t), v >> 8, v & 255, a >> 8, a & 255];
+    },
+    umpNoteOff: function(g, c, n, v, t, a) {
+      v = v || 0; t = t || 0; a = a || 0;
+      v = _16b(v); a = _16b(a);
+      return [0x40 + _4b(g), 0x80 + _ch(c), _7bn(n), _8b(t), v >> 8, v & 255, a >> 8, a & 255];
+    },
+    umpAftertouch: function(g, c, n, x, y, z, w) {
+      return [0x40 + _4b(g), 0xa0 + _ch(c), _7bn(n), 0].concat(_32a(x, y, z, w));
+    },
+    umpAftertouchF: function(g, c, n, x) {
+      return _helperGC.umpAftertouch(g, c, n, _f_32(x));
+    },
+    umpControl: function(g, c, n, x, y, z, w) {
+      if (_noctrl.includes(n)) _throw(n);
+      return [0x40 + _4b(g), 0xb0 + _ch(c), _7b(n), 0].concat(_32a(x, y, z, w));
+    },
+    umpPortamento: function(g, c, n) {
+      return [0x40 + _4b(g), 0xb0 + _ch(c), 0x54, 0, _7bn(n), 0, 0, 0];
+    },
+    umpPressure: function(g, c, x, y, z, w) {
+      return [0x40 + _4b(g), 0xd0 + _ch(c), 0, 0].concat(_32a(x, y, z, w));
+    },
+    umpPressureF: function(g, c, x) {
+      return _helperGC.umpPressure(g, c, _f_32(x));
+    },
+    umpProgram: function(g, c, n, msb, lsb) {
+      return typeof msb == 'undefined' && typeof lsb == 'undefined' ?
+        [0x40 + _4b(g), 0xc0 + _ch(c), 0, 0, _7bn(n), 0, 0, 0] :
+        [0x40 + _4b(g), 0xc0 + _ch(c), 0, 1, _7bn(n), 0, _7bn(msb), _7bn(lsb)];
+    },
+    umpPitchBend: function(g, c, x, y, z, w) {
+      return [0x40 + _4b(g), 0xe0 + _ch(c), 0, 0].concat(_32a(x, y, z, w));
+    },
+    umpPitchBendF: function(g, c, x) {
+      return _helperGC.umpPitchBend(g, c, _f_32((x + 1) / 2));
+    },
+    umpPnPitchBend: function(g, c, n, x, y, z, w) {
+      return [0x40 + _4b(g), 0x60 + _ch(c), _7bn(n), 0].concat(_32a(x, y, z, w));
+    },
+    umpPnPitchBendF: function(g, c, n, x) {
+      return _helperGC.umpPnPitchBend(g, c, n, _f_32((x + 1) / 2));
+    },
+    umpRPN: function(g, c, b, n, x, y, z, w) {
+      return [0x40 + _4b(g), 0x20 + _ch(c), _7b(b), _7b(n)].concat(_32a(x, y, z, w));
+    },
+    umpNRPN: function(g, c, b, n, x, y, z, w) {
+      return [0x40 + _4b(g), 0x30 + _ch(c), _7b(b), _7b(n)].concat(_32a(x, y, z, w));
+    },
+    umpPnRPN: function(g, c, n, i, x, y, z, w) {
+      return [0x40 + _4b(g), 0x00 + _ch(c), _7bn(n), _8b(i)].concat(_32a(x, y, z, w));
+    },
+    umpPnNRPN: function(g, c, n, i, x, y, z, w) {
+      return [0x40 + _4b(g), 0x10 + _ch(c), _7bn(n), _8b(i)].concat(_32a(x, y, z, w));
+    },
+    umpFineTuning: function(g, c, x, y, z, w) {
+      return _helperGC.umpRPN(g, c, 0, 1, x, y, z, w);
+    },
+    umpCoarseTuning: function(g, c, n) {
+      return [0x40 + _4b(g), 0x20 + _ch(c), 0, 2, _7b(n) * 2, 0, 0, 0];
+    },
+    umpTuningProgram: function(g, c, n) {
+      return [0x40 + _4b(g), 0x20 + _ch(c), 0, 3, _7b(n) * 2, 0, 0, 0];
+    },
+    umpTuningBank: function(g, c, n) {
+      return [0x40 + _4b(g), 0x20 + _ch(c), 0, 4, _7b(n) * 2, 0, 0, 0];
+    },
+    umpPnManagement: function(g, c, n, m) {
+      var a = m.toString().split('');
+      var x = 0;
+      for (var i = 0; i < a.length; i++) {
+        if (a[i] == 'S' && !(x & 1)) x |= 1;
+        else if (a[i] == 'D' && !(x & 2)) x |= 2;
+        else { x = m; break; }
+      }
+      return [0x40 + _4b(g), 0xf0 + _ch(c), _7bn(n), _8b(x), 0, 0, 0, 0];
+    }
+  };
+  _helperGC.umpPnPressure = _helperGC.umpAftertouch;
+  _helperGC.umpPnPressureF = _helperGC.umpAftertouchF;
+  var _helperGCX = {
+    umpCustomText: function(g, c, d, b, s, t) {
+      var i;
+      var a = [];
+      t = JZZ.lib.toUTF8('' + t);
+      for (i = 0; i < t.length; i++) a.push(t.charCodeAt(i));
+      a = _slice(a, 12);
+      for (i = 0; i < a.length; i++) a[i] = [0xd0 + _4b(g), _umpseqstat(a.length, i) * 64 + (d ? 16 : 0) + _ch(c), b, s].concat(a[i], _zeros).slice(0, 16);
+      return a;
+    },
+    umpCMetadata: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 0, t); },
+    umpCProjectName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 1, t); },
+    umpCCompositionName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 2, t); },
+    umpCClipName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 3, t); },
+    umpCCopyright: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 4, t); },
+    umpCComposerName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 5, t); },
+    umpCLyricistName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 6, t); },
+    umpCArrangerName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 7, t); },
+    umpCPublisherName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 8, t); },
+    umpCPerformerName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 9, t); },
+    umpCAccPerformerName: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 10, t); },
+    umpCRecordingDate: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 11, t); },
+    umpCRecordingLocation: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 1, 12, t); },
+    umpCText: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 2, 0, t); },
+    umpCLyrics: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 2, 1, t); },
+    umpCLyricsLanguage: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 2, 2, t); },
+    umpCRuby: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 2, 3, t); },
+    umpCRubyLanguage: function(g, c, t) { return _helperGCX.umpCustomText(g, c, 0, 2, 4, t); }
+  };
+
+  var _helpersUmp = {};
+  function _copyHelperNN(name, func) {
+    UMP[name] = function() { return new UMP(func.apply(this, arguments));};
+    _helpersUmp[name] = function() { return this.send(func.apply(this, arguments)); };
+  }
+  function _copyHelperGN(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      return new UMP(func.apply(this, args));
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      return this.send(func.apply(this, args));
+    };
+  }
+  function _copyHelperGNX(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      var a = func.apply(this, args);
+      for (var i = 0; i < a.length; i++) a[i] = new UMP(a[i]);
+      return a;
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      var a = func.apply(this, args);
+      for (var i = 0; i < a.length; i++) this.send(a[i]);
+      return this;
+    };
+  }
+  function _copyHelperGC(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      return new UMP(func.apply(this, args));
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      return this.send(func.apply(this, args));
+    };
+  }
+  function _copyHelperGCX(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      var a = func.apply(this, args);
+      for (var i = 0; i < a.length; i++) a[i] = new UMP(a[i]);
+      return a;
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      var a = func.apply(this, args);
+      for (var i = 0; i < a.length; i++) this.send(a[i]);
+      return this;
+    };
+  }
+  function _umpseqstat(n, i) { return n == 1 ? 0 : i == 0 ? 0x1 : i == n - 1 ? 0x3 : 0x2; }
+  function _slice(m, n) {
+    var a = [];
+    for (var x = m; x.length; x = x.slice(n)) a.push(x.slice(0, n));
+    return a.length ? a : [[]];
+  }
+  function _sliceSX(gr, m) {
+    var a = _slice(m.slice(1, m.length - 1), 6);
+    for (var i = 0; i < a.length; i++) a[i] = new UMP([0x30 + gr, _umpseqstat(a.length, i) * 16 + a[i].length].concat(a[i], _zeros).slice(0, 8));
+    return a;
+  }
+  function _copyHelperSX(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      return _sliceSX(_4b(args[0]), func.apply(this, args.slice(1)));
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      var a = _sliceSX(_4b(args[0]), func.apply(this, args.slice(1)));
+      var g = this;
+      for (var i = 0; i < a.length; i++) g = g.send(a[i]);
+      return g;
+    };
+  }
+  function _copyHelperSXX(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      var m = func.apply(this, args.slice(1));
+      var a = [];
+      for (var i = 0; i < m.length; i++) a = a.concat(_sliceSX(_4b(args[0]), m[i]));
+      return a;
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      var m = func.apply(this, args.slice(1));
+      var g = this;
+      for (var i = 0; i < m.length; i++) {
+        var a = _sliceSX(_4b(args[0]), m[i]);
+        for (var j = 0; j < a.length; j++) g = g.send(a[j]);
+      }
+      return g;
+    };
+  }
+  function _copyHelperM1N(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      return new UMP([0x10 + _4b(args[0])].concat(func.apply(this, args.slice(1)), _zeros).slice(0, 4));
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      return this.send([0x10 + _4b(args[0])].concat(func.apply(this, args.slice(1)), _zeros).slice(0, 4));
+    };
+  }
+  function _copyHelperM1C(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      return new UMP([0x20 + _4b(args[0])].concat(func.apply(this, args.slice(1)), _zeros).slice(0, 4));
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      return this.send([0x20 + _4b(args[0])].concat(func.apply(this, args.slice(1)), _zeros).slice(0, 4));
+    };
+  }
+  function _copyHelperM1CX(name, func) {
+    UMP[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      var a = func.apply(this, args.slice(1));
+      for (var i = 0; i < a.length; i++) a[i] = new UMP([0x20 + _4b(args[0])].concat(a[i], _zeros).slice(0, 4));
+      return a;
+    };
+    _helpersUmp[name] = function() {
+      var args = Array.prototype.slice.call(arguments);
+      if (typeof this._gr != 'undefined') args = [this._gr].concat(args);
+      if (typeof this._ch != 'undefined') args = [args[0]].concat([this._ch]).concat(args.slice(1));
+      var a = func.apply(this, args.slice(1));
+      var g = this;
+      for (var i = 0; i < a.length; i++) g = g.send([0x20 + _4b(args[0])].concat(a[i], _zeros).slice(0, 4));
+      return g;
+    };
+  }
+  _for(_helperNN, function(n) { _copyHelperNN(n, _helperNN[n]); });
+  _for(_helperGN, function(n) { _copyHelperGN(n, _helperGN[n]); });
+  _for(_helperGNX, function(n) { _copyHelperGNX(n, _helperGNX[n]); });
+  _for(_helperGC, function(n) { _copyHelperGC(n, _helperGC[n]); });
+  _for(_helperGCX, function(n) { _copyHelperGCX(n, _helperGCX[n]); });
+  _for(_helperNC, function(n) { _copyHelperM1N(n, _helperNC[n]); });
+  _for(_helperMPE, function(n) { _copyHelperM1C(n, _helperMPE[n]); });
+  _for(_helperCH, function(n) { _copyHelperM1C(n, _helperCH[n]); });
+  _for(_helperGCH, function(n) { _copyHelperM1CX(n, _helperGCH[n]); });
+  _for(_helperSX, function(n) { _copyHelperSX(n, _helperSX[n]); });
+  _for(_helperSXX, function(n) { _copyHelperSXX(n, _helperSXX[n]); });
+
+  function _copyUmpHelpers(M) {
+    _for(_helpersUmp, function(n) { M.prototype[n] = _helpersUmp[n]; });
+  }
+  _copyUmpHelpers(_M2);
+
+  UMP.prototype.getTempo = function() {
+    if (this.isTempo()) return (this[4] << 24) + (this[5] << 16) + (this[6] << 8) + this[7];
+  };
+  UMP.prototype.getBPM = function() {
+    var n = this.getTempo();
+    if (n) return Math.round(6000000000 / n);
+  };
+  UMP.prototype.getTimeSignature = function() {
+    if (this.isTimeSignature()) return [this[4], 1 << this[5]];
+  };
+  UMP.prototype.getTicksPQN = function() {
+    if (this.isTicksPQN()) return (this[2] << 8) + this[3];
+  };
+  UMP.prototype.getDelta = function() {
+    if (this.isDelta()) return ((this[1] & 15) << 16) + (this[2] << 8) + this[3];
+  };
+
+  UMP.prototype.isTempo = function() {
+    return (this[0] >> 4) == 13 && (this[1] >> 4) == 1 &&  this[2] == 0 &&  this[3] == 0;
+  };
+  UMP.prototype.isTimeSignature = function() {
+    return (this[0] >> 4) == 13 && (this[1] >> 4) == 1 &&  this[2] == 0 &&  this[3] == 1;
+  };
+  UMP.prototype.isTicksPQN = function() { return this[0] == 0 && (this[1] >> 4) == 3; };
+  UMP.prototype.isDelta = function() { return this[0] == 0 && (this[1] >> 4) == 4; };
+  UMP.prototype.isStartClip = function() { return this.match([0xf0, 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); };
+  UMP.prototype.isEndClip = function() { return this.match([0xf0, 0x21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); };
+  UMP.prototype.isNoteOn = function() {
+    var c = (this[0] || 0) >> 4;
+    var d = (this[1] || 0) >> 4;
+    if (c == 4) return d == 9;
+    else if (c == 2) return d == 9 && !!this[3];
+    return false;
+  };
+  UMP.prototype.isNoteOff = function() {
+    var c = (this[0] || 0) >> 4;
+    var d = (this[1] || 0) >> 4;
+    if (c == 4) return d == 8;
+    else if (c == 2) return d == 8 || (d == 9 && !this[3]);
+    return false;
+  };
+  UMP.prototype.toString = MIDI.prototype.toString;
+  UMP.prototype._str = function() {
+    var t = this._string();
+    return t ? _hexx(this) + ' -- ' + t : _hexx(this);
+  };
+  UMP.prototype._string = function() {
+    var n, s, ss;
+    var t = this[0] >> 4;
+    if (t == 1 || t == 2) return new MIDI(this.slice(1))._string();
+    else if (t == 0) {
+      n = this[1] >> 4;
+      s = ['NOOP', 'JR Clock', 'JR Timestamp', 'Ticks Per Quarter Note', 'Delta Ticks'][n];
+    }
+    else if (t == 3) {
+      s = 'SysEx';
+    }
+    else if (t == 4) {
+      n = this[1] >> 4;
+      s = {
+        0: 'Registered Per-Note Controller',
+        1: 'Assignable Per-Note Controller',
+        2: 'Registered Controller',
+        3: 'Assignable Controller',
+        4: 'Relative Registered Controller',
+        5: 'Relative Assignable Controller',
+        6: 'Per-Note Pitch Bend',
+        8: 'Note Off',
+        9: 'Note On',
+        10: 'Poly Pressure',
+        11: 'Control Change',
+        12: 'Program Change',
+        13: 'Channel Pressure',
+        14: 'Pitch Bend',
+        15: 'Per-Note Management'
+      }[n];
+      if (n == 11) {
+        s = {
+          84: 'Portamento'
+        }[this[2]] || s;
+      }
+      if (n == 2) {
+        ss = {
+          '0000': 'Pitch Bend Sensitivity',
+          '0001': 'Fine Tuning',
+          '0002': 'Coarse Tuning',
+          '0003': 'Select Tuning Program',
+          '0004': 'Select Tuning Bank',
+          '0005': 'Vibrato Depth Range',
+          '7f7f': 'NONE'
+        }[__hex(this[2]) + '' + __hex(this[3])];
+        if (ss) s += ': ' + ss;
+      }
+    }
+    else if (t == 5) {
+      s = 'Data';
+    }
+    else if (t == 13) {
+      n = this[2];
+      if (n == 0) {
+        n = this[3];
+        s = {
+          0: 'Tempo ',
+          1: 'Time Signature ',
+          2: 'Metronome',
+          5: 'Key Signature',
+          6: 'Chord Name'
+        }[n];
+        if (n == 0) s += this.getBPM() + ' BPM';
+        else if (n == 1) s += this.getTimeSignature().join('/');
+      }
+      else if (n == 1) {
+        n = this[3];
+        s = {
+          0: 'Metadata',
+          1: 'Project Name',
+          2: 'Composition Name',
+          3: 'Clip Name',
+          4: 'Copyright',
+          5: 'Composer Name',
+          6: 'Lyricist Name',
+          7: 'Arranger Name',
+          8: 'Publisher Name',
+          9: 'Primary Performer Name',
+          10: 'Accompanying Performer Name',
+          11: 'Recording Date',
+          12: 'Recording Location'
+        }[n] || 'Unknown Text';
+      }
+      else if (n == 2) {
+        n = this[3];
+        s = {
+          0: 'Text',
+          1: 'Lyrics',
+          2: 'Lyrics Language',
+          3: 'Ruby',
+          4: 'Ruby Language',
+        }[n] || 'Unknown Text';
+      }
+    }
+    if (t == 15) {
+      s = { 0x20: 'Start of Clip', 0x21: 'End of Clip' }[this[1]];
+    }
+    return s;
+  };
+
+  UMP.prototype._stamp = MIDI.prototype._stamp;
+  UMP.prototype._unstamp = MIDI.prototype._unstamp;
+  UMP.prototype._stamped = MIDI.prototype._stamped;
+  UMP.prototype.match = MIDI.prototype.match;
+
+  JZZ.UMP = UMP;
+  _J.prototype.UMP = UMP;
+  JZZ.MIDI2 = UMP;
+  _J.prototype.MIDI2 = UMP;
+
+  function _16_7(a, b) {
+    var n = a * 0x100 + b;
+    return n ? (n >> 9) || 1 : 0;
+  }
+  function _32_7(a, b, c, d) {
+    var n = a * 0x1000000 + b * 0x10000 + c * 0x100 + d;
+    return (n >> 25) & 127;
+  }
+  function _grp(m, g) { m.gr = g; return m; }
+  function _m2m1(msg) {
+    if (msg.isMidi2) {
+      var n, c, x;
+      var t = msg[0] >> 4;
+      var g = msg[0] & 15;
+      if (t == 1 || t == 2) {
+        this._emit(_grp(new MIDI(msg.slice(1)), g));
+      }
+      else if (t == 3) {
+        c = msg[1] >> 4;
+        n = msg[1] & 15;
+        if (c == 0) {
+          this._emit(_grp(new MIDI([0xf0].concat(msg.slice(2, 2 + n), [0xf7])), g));
+          this._sx[g] = undefined;
+        }
+        else if (c == 1) {
+          this._sx[g] = msg.slice(2, 2 + n);
+        }
+        else if (c == 2) {
+          if (this._sx[g]) this._sx[g] = this._sx[g].concat(msg.slice(2, 2 + n));
+        }
+        else if (c == 3) {
+          if (this._sx[g]) this._emit(_grp(new MIDI([0xf0].concat(this._sx[g], msg.slice(2, 2 + n), [0xf7])), g));
+          this._sx[g] = undefined;
+        }
+      }
+      else if (t == 4) {
+        n = msg[1] >> 4;
+        c = msg[1] & 15;
+        if (n == 2 || n == 3) {
+          this._emit(_grp(new MIDI([0xb0 + c, n == 2 ? 101 : 99, msg[2]]), g));
+          this._emit(_grp(new MIDI([0xb0 + c, n == 2 ? 100 : 98, msg[3]]), g));
+          this._emit(_grp(new MIDI([0xb0 + c, 6, msg[4] >> 1]), g));
+          this._emit(_grp(new MIDI([0xb0 + c, 38, (msg[4] & 1) * 64 + (msg[4] >> 2)]), g));
+        }
+        else if (n == 8 || n == 9) {
+          this._emit(_grp(new MIDI([msg[1], msg[2], _16_7(msg[4], msg[5])]), g));
+        }
+        if (n == 10) {
+          this._emit(_grp(new MIDI([msg[1], msg[2], _32_7(msg[4], msg[5], msg[6], msg[7])]), g));
+        }
+        if (n == 11) {
+          if (_noctrl.includes(msg[2])) return;
+          this._emit(_grp(new MIDI([msg[1], msg[2], _32_7(msg[4], msg[5], msg[6], msg[7])]), g));
+        }
+        if (n == 13) {
+          this._emit(_grp(new MIDI([msg[1], _32_7(msg[4], msg[5], msg[6], msg[7])]), g));
+        }
+        if (n == 14) {
+          x = (msg[4] * 0x1000000 + msg[5] * 0x10000 + msg[6] * 0x100 + msg[4]) >> 18;
+          this._emit(_grp(new MIDI([msg[1], x & 127, (x >> 7) & 127]), g));
+        }
+        else if (n == 12) {
+          if (msg[3]) {
+            this._emit(_grp(new MIDI([0xb0 + c, 0, msg[6]]), g));
+            this._emit(_grp(new MIDI([0xb0 + c, 32, msg[7]]), g));
+          }
+          this._emit(_grp(new MIDI([msg[1], msg[4]]), g));
+        }
+      }
+    }
+    else this._emit(msg);
+  }
+  function M2M1() {
+    var self = new _M();
+    self._sx = [];
+    self._receive = _m2m1;
+    self._resume();
+    return self.MIDI2();
+  }
+  JZZ.M2M1 = M2M1;
+  _J.prototype.M2M1 = JZZ.M2M1;
+
+  function _m1m2(msg) {
+    if (!msg.isMidi2) {
+      var gr = msg.gr >= 0 && msg.gr <= 15 ? msg.gr : 0;
+      if (msg[0] >= 0x80 && msg[0] < 0xf0) {
+        this._emit(JZZ.MIDI2([0x20 + gr].concat(msg.slice(), _zeros).slice(0, 4)));
+      }
+      else if (msg[0] > 0xf0 && msg[0] <= 0xff && msg[0] != 0xf7) {
+        this._emit(JZZ.MIDI2([0x10 + gr].concat(msg.slice(), _zeros).slice(0, 4)));
+      }
+      else if (msg.isFullSysEx()) {
+        var a = _sliceSX(gr, msg.slice());
+        for (var i = 0; i < a.length; i++) this._emit(JZZ.MIDI2(a[i]));
+      }
+    }
+    else this._emit(msg);
+  }
+  function M1M2() {
+    var self = new _M();
+    self._receive = _m1m2;
+    self._resume();
+    return self;
+  }
+  JZZ.M1M2 = M1M2;
+  _J.prototype.M1M2 = JZZ.M1M2;
+
   JZZ.lib = {};
   JZZ.lib.now = _now;
   JZZ.lib.schedule = _schedule;
+  var _sch_list = [];
+  var _sch_worker;
+  var _sch_count = 0;
+  try {
+    var _blob = URL.createObjectURL(new Blob(['(', function() {
+      function tick() {
+        postMessage({});
+        setTimeout(tick, 0);
+      }
+      tick();
+    }.toString(), ')()'], { type: 'application/javascript' }));
+    var _sch_tick = function() {
+      var n = _sch_list.length;
+      // cannot use i < _sch_list.length !
+      for (var i = 0; i < n; i++) _sch_list.shift()();
+      _sch_count++;
+      if (_sch_count > 20 && _sch_worker) {
+        _sch_worker.terminate();
+        _sch_worker = undefined;
+      }
+    };
+    var _sch = function(x) {
+      _sch_list.push(x);
+      _sch_count = 0;
+      if (!_sch_worker) {
+        _sch_worker = new Worker(_blob);
+        _sch_worker.onmessage = _sch_tick;
+      }
+    };
+    _sch(function() { JZZ.lib.schedule = _sch; });
+  }
+  catch (e) {}
+
   JZZ.lib.openMidiOut = function(name, engine) {
     var port = new _M();
     engine._openOut(port);
@@ -3162,7 +4029,7 @@ function _JZZ() {
             if (!osc.stop) osc.stop = osc.noteOff;
             osc.start(0.1); osc.stop(0.11);
           }
-          else {
+          else if (typeof document != 'undefined') {
             document.removeEventListener('touchstart', _activateAudioContext);
             document.removeEventListener('touchend', _activateAudioContext);
             document.removeEventListener('mousedown', _activateAudioContext);
@@ -3174,12 +4041,14 @@ function _JZZ() {
           document.addEventListener('touchend', _activateAudioContext);
           document.addEventListener('mousedown', _activateAudioContext);
           document.addEventListener('keydown', _activateAudioContext);
-          _activateAudioContext();
         }
+        _activateAudioContext();
       }
     }
   }
   JZZ.lib.copyMidiHelpers = _copyMidiHelpers;
+  JZZ.lib.copyMidi2Helpers = _copyUmpHelpers;
+  JZZ.lib.copyUmpHelpers = _copyUmpHelpers;
   JZZ.lib.getAudioContext = function() { _initAudioContext(); return _ac; };
   var _b64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   JZZ.lib.fromBase64 = function(input) {
@@ -3858,11 +4727,14 @@ function _JZZ() {
 // JZZ.synth.Tiny.js
 function _Tiny() {
 
+  /* istanbul ignore next */
   if (!JZZ) return;
+  /* istanbul ignore next */
   if (!JZZ.synth) JZZ.synth = {};
+  /* istanbul ignore next */
   if (JZZ.synth.Tiny) return;
 
-  var _version = '1.2.9';
+  var _version = '1.3.7';
 
 function WebAudioTinySynth(opt){
   this.__proto__ = this.sy =
@@ -4218,6 +5090,7 @@ function WebAudioTinySynth(opt){
       /**/
       this.preroll=0.2;
       this.relcnt=0;
+      /* istanbul ignore next */
       setInterval(
         function(){
           if(++this.relcnt>=3){
@@ -4373,7 +5246,7 @@ function WebAudioTinySynth(opt){
     _note:function(t,ch,n,v,p){
       var out,sc,pn;
       var o=[],g=[],vp=[],fp=[],r=[];
-      var f=440*Math.pow(2,(n-69 + this.masterTuningC + this.tuningC[ch] + (this.masterTuningF + this.tuningF[ch] + this.scaleTuning[ch][n%12]))/12);
+      var f=440*Math.pow(2,(n-69 + this.masterTuningC + this.tuningC[ch] + (this.masterTuningF + this.tuningF[ch]/8192 + this.scaleTuning[ch][n%12]))/12);
       this._limitVoices(ch,n);
       for(var i=0;i<p.length;++i){
         pn=p[i];
@@ -4602,7 +5475,7 @@ function WebAudioTinySynth(opt){
               this.brange[ch]=(this.brange[ch]&0x3f80)|msg[2];
               break;
             case 1:
-              this.tuningF[ch]=((this.tuningF[ch]+0x2000)&0x3f80)|msg[2]-0x2000;
+              this.tuningF[ch]=(((this.tuningF[ch]+0x2000)&0x3f80)|msg[2])-0x2000;
               break;
             case 2: break;
           }
@@ -4770,7 +5643,11 @@ function WebAudioTinySynth(opt){
     return obj;
   }
 
-  var _ac = JZZ.lib.getAudioContext();
+  var _ac;
+  function initAC() {
+    if (!_ac) _ac = JZZ.lib.getAudioContext();
+    return !!_ac;
+  }
 
   var _synth = {};
   var _noname = [];
@@ -4779,7 +5656,7 @@ function WebAudioTinySynth(opt){
   _engine._info = function(name) {
     if (!name) name = 'JZZ.synth.Tiny';
     return {
-      type: 'Web Audo',
+      type: 'Web Audio',
       name: name,
       manufacturer: 'virtual',
       version: _version
@@ -4787,7 +5664,12 @@ function WebAudioTinySynth(opt){
   };
 
   _engine._openOut = function(port, name) {
-    if (!_ac) { port._crash('AudioContext not supported'); return; }
+    initAC();
+    /* istanbul ignore next */
+    if (!_ac) {
+      port._crash('AudioContext not supported');
+      return;
+    }
     var synth;
     if (typeof name !== 'undefined') {
       name = '' + name;
@@ -4816,7 +5698,7 @@ function WebAudioTinySynth(opt){
   };
 
   JZZ.synth.Tiny.register = function(name) {
-    return _ac ? JZZ.lib.registerMidiOut(name, _engine) : false;
+    return initAC() ? JZZ.lib.registerMidiOut(name, _engine) : false;
   };
 
   JZZ.synth.Tiny.version = function() { return _version; };
@@ -4829,7 +5711,7 @@ function _SMF() {
   /* istanbul ignore next */
   if (JZZ.MIDI.SMF) return;
 
-  var _ver = '1.6.8';
+  var _ver = '1.8.4';
 
   var _now = JZZ.lib.now;
   function _error(s) { throw new Error(s); }
@@ -4850,6 +5732,13 @@ function _SMF() {
   }
   function _num4le(n) {
     return String.fromCharCode(n & 0xff) + String.fromCharCode((n >> 8) & 0xff) + String.fromCharCode((n >> 16) & 0xff) + String.fromCharCode((n >> 24) & 0xff);
+  }
+  function _u8a2s(u) {
+    var s = '';
+    var len = u.byteLength;
+    // String.fromCharCode.apply(null, u) throws "RangeError: Maximum call stack size exceeded" on large files
+    for (var i = 0; i < len; i++) s += String.fromCharCode(u[i]);
+    return s;
   }
 
   function SMF() {
@@ -4873,30 +5762,32 @@ function _SMF() {
         for (var i = 0; i < arguments[0].length; i++) self[0].add(0, arguments[0][i]);
         return self;
       }
+      var data;
       try {
         if (arguments[0] instanceof ArrayBuffer) {
-          self.load(String.fromCharCode.apply(null, new Uint8Array(arguments[0])));
-          return self;
+          data = _u8a2s(new Uint8Array(arguments[0]));
         }
       }
       catch (err) {/**/}
       try {
         if (arguments[0] instanceof Uint8Array || arguments[0] instanceof Int8Array) {
-          self.load(String.fromCharCode.apply(null, new Uint8Array(arguments[0])));
-          return self;
+          data = _u8a2s(new Uint8Array(arguments[0]));
         }
       }
       catch (err) {/**/}
       try {
         /* istanbul ignore next */
         if (arguments[0] instanceof Buffer) {
-          self.load(arguments[0].toString('binary'));
-          return self;
+          data = arguments[0].toString('binary');
         }
       }
       catch (err) {/**/}
       if (typeof arguments[0] == 'string' && arguments[0] != '0' && arguments[0] != '1' && arguments[0] != '2') {
-        self.load(arguments[0]);
+        data = arguments[0];
+      }
+      if (data == '') _error('Empty file');
+      if (data) {
+        self.load(data);
         return self;
       }
       type = parseInt(arguments[0]);
@@ -4926,6 +5817,7 @@ function _SMF() {
     return self;
   }
   SMF.version = function() { return _ver; };
+  SMF.num4 = _num4;
 
   SMF.prototype = [];
   SMF.prototype.constructor = SMF;
@@ -4958,39 +5850,38 @@ function _SMF() {
       off = 20;
       s = s.substr(20, s.charCodeAt(16) + s.charCodeAt(17) * 0x100 + s.charCodeAt(18) * 0x10000 + s.charCodeAt(19) * 0x1000000);
     }
-    this.loadSMF(s, off);
+    _loadSMF(this, s, off);
   };
 
   var MThd0006 = 'MThd' + String.fromCharCode(0) + String.fromCharCode(0) + String.fromCharCode(0) + String.fromCharCode(6);
-  SMF.prototype.loadSMF = function(s, off) {
-    if (!s.length) _error('Empty file');
+  function _loadSMF(self, s, off) {
     if (s.substr(0, 8) != MThd0006) {
       var z = s.indexOf(MThd0006);
       if (z != -1) {
         s = s.substr(z);
-        this._complain(off, 'Extra leading characters', z);
+        self._complain(off, 'Extra leading characters', z);
         off += z;
       }
       else _error('Not a MIDI file');
     }
-    this._off = off;
-    this.type = s.charCodeAt(8) * 16 + s.charCodeAt(9);
-    this._off_type = off + 8;
-    this.ntrk = s.charCodeAt(10) * 16 + s.charCodeAt(11);
-    this._off_ntrk = off + 10;
+    self._off = off;
+    self.type = s.charCodeAt(8) * 16 + s.charCodeAt(9);
+    self._off_type = off + 8;
+    self.ntrk = s.charCodeAt(10) * 16 + s.charCodeAt(11);
+    self._off_ntrk = off + 10;
     if (s.charCodeAt(12) > 0x7f) {
-      this.fps = 0x100 - s.charCodeAt(12);
-      this.ppf = s.charCodeAt(13);
-      this._off_fps = off + 12;
-      this._off_ppf = off + 13;
+      self.fps = 0x100 - s.charCodeAt(12);
+      self.ppf = s.charCodeAt(13);
+      self._off_fps = off + 12;
+      self._off_ppf = off + 13;
     }
     else{
-      this.ppqn = s.charCodeAt(12) * 256 + s.charCodeAt(13);
-      this._off_ppqn = off + 12;
+      self.ppqn = s.charCodeAt(12) * 256 + s.charCodeAt(13);
+      self._off_ppqn = off + 12;
     }
-    if (this.type > 2) this._complain(8 + off, 'Invalid MIDI file type', this.type);
-    else if (this.type == 0 && this.ntrk > 1) this._complain(10 + off, 'Wrong number of tracks for the type 0 MIDI file', this.ntrk);
-    if (!this.ppf && !this.ppqn) _error('Invalid MIDI header');
+    if (self.type > 2) self._complain(8 + off, 'Invalid MIDI file type', self.type);
+    else if (self.type == 0 && self.ntrk > 1) self._complain(10 + off, 'Wrong number of tracks for the type 0 MIDI file', self.ntrk);
+    if (!self.ppf && !self.ppqn) _error('Invalid MIDI header');
     var n = 0;
     var p = 14;
     while (p < s.length - 8) {
@@ -5000,23 +5891,23 @@ function _SMF() {
       var len = (s.charCodeAt(p + 4) << 24) + (s.charCodeAt(p + 5) << 16) + (s.charCodeAt(p + 6) << 8) + s.charCodeAt(p + 7);
       if (len <= 0) { // broken file
         len = s.length - p - 8;
-        this._complain(p + off + 4, 'Invalid track length', s.charCodeAt(p + 4) + '/' + s.charCodeAt(p + 5) + '/' + s.charCodeAt(p + 6) + '/' + s.charCodeAt(p + 7));
+        self._complain(p + off + 4, 'Invalid track length', s.charCodeAt(p + 4) + '/' + s.charCodeAt(p + 5) + '/' + s.charCodeAt(p + 6) + '/' + s.charCodeAt(p + 7));
       }
       p += 8;
       var data = s.substr(p, len);
-      this.push(new Chunk(type, data, offset));
-      if (type == 'MThd') this._complain(offset, 'Unexpected chunk type', 'MThd');
+      self.push(new Chunk(type, data, offset));
+      if (type == 'MThd') self._complain(offset, 'Unexpected chunk type', 'MThd');
       p += len;
     }
-    if (n != this.ntrk) {
-      this._complain(off + 10, 'Incorrect number of tracks', this.ntrk);
-      this.ntrk = n;
+    if (n != self.ntrk) {
+      self._complain(off + 10, 'Incorrect number of tracks', self.ntrk);
+      self.ntrk = n;
     }
-    if (!this.ntrk)  _error('No MIDI tracks');
-    if (!this.type && this.ntrk > 1 || this.type > 2)  this.type = 1;
-    if (p < s.length) this._complain(off + p, 'Extra trailing characters', s.length - p);
-    if (p > s.length) this._complain(off + s.length, 'Incomplete data', p - s.length);
-  };
+    if (!self.ntrk)  _error('No MIDI tracks');
+    if (!self.type && self.ntrk > 1 || self.type > 2)  self.type = 1;
+    if (p < s.length) self._complain(off + p, 'Extra trailing characters', s.length - p);
+    if (p > s.length) self._complain(off + s.length, 'Incomplete data', p - s.length);
+  }
 
   function Warn(obj) {
     if (!(this instanceof Warn)) return new Warn(obj);
@@ -5601,7 +6492,6 @@ function _SMF() {
     return this;
   };
 
-  MTrk.prototype._ch = undefined;
   MTrk.prototype._sxid = 0x7f;
   MTrk.prototype._image = function() {
     var F = function() {}; F.prototype = this._orig;
@@ -5671,6 +6561,7 @@ function _SMF() {
     self.playing = false;
     self._loop = 0;
     self._data = [];
+    self._hdr = [];
     self._pos = 0;
     self._tick = (function(x) { return function(){ x.tick(); }; })(self);
     for (var k in Player.prototype) if (Player.prototype.hasOwnProperty(k)) self[k] = Player.prototype[k];
@@ -5689,6 +6580,7 @@ function _SMF() {
     this._pos = 0;
     this._p0 = 0;
     this._t0 = _now();
+    this._list = this._hdr;
     this.tick();
   };
   Player.prototype.stop = function() {
@@ -5721,10 +6613,9 @@ function _SMF() {
   Player.prototype.filter = function(f) {
     this._filter = f instanceof Function ? f : _filter;
   };
-  function _div(s) { return (s.charCodeAt(0) << 16) + (s.charCodeAt(1) << 8) + s.charCodeAt(2); }
   Player.prototype._receive = function(e) {
-    if (e.ff == 0x51 && this.ppqn) {
-      this._mul = this.ppqn * 1000.0 / _div(e.dd);
+    if (e.isTempo() && this.ppqn) {
+      this._mul = this.ppqn * (e.isMidi2 ? 100000.0 : 1000.0) / (e.getTempo() || 1);
       this.mul = this._mul * this._speed;
       this._t0 = _now();
       this._p0 = this._pos;
@@ -5735,20 +6626,28 @@ function _SMF() {
     var t = _now();
     var e;
     this._pos = this._p0 + (t - this._t0) * this.mul;
-    for(; this._ptr < this._data.length; this._ptr++) {
-      e = this._data[this._ptr];
+    for(; this._ptr < this._list.length; this._ptr++) {
+      e = this._list[this._ptr];
       if (e.tt > this._pos) break;
       this._filter(e);
     }
-    if (this._ptr >= this._data.length) {
-      if (this._loop && this._loop != -1) this._loop--;
-      if (this._loop) {
+    if (this._ptr >= this._list.length) {
+      if (this._list == this._hdr) {
+        this._list = this._data;
         this._ptr = 0;
         this._p0 = 0;
         this._t0 = t;
       }
-      else this.stop();
-      this.onEnd();
+      else {
+        if (this._loop && this._loop != -1) this._loop--;
+        if (this._loop) {
+          this._ptr = 0;
+          this._p0 = 0;
+          this._t0 = t;
+        }
+        else this.stop();
+        this.onEnd();
+      }
     }
     if (this.event == 'stop') {
       this.playing = false;
@@ -5790,15 +6689,19 @@ function _SMF() {
     if (this.ppqn) {
       this._mul = this.ppqn / 500.0; // 120 bpm
       m = this._mul;
+      for (i = 0; i < this._hdr.length; i++) {
+        e = this._hdr[i];
+        if (e.isTempo()) m = this.ppqn * 100000.0 / (e.getTempo() || 1);
+      }
       t = 0;
       this._durationMS = 0;
       this._ttt.push({ t: 0, m: m, ms: 0 });
       for (i = 0; i < this._data.length; i++) {
         e = this._data[i];
-        if (e.ff == 0x51) {
+        if (e.isTempo()) {
           this._durationMS += (e.tt - t) / m;
           t = e.tt;
-          m = this.ppqn * 1000.0 / _div(e.dd);
+          m = this.ppqn * (e.isMidi2 ? 100000.0 : 1000.0) / (e.getTempo() || 1);
           this._ttt.push({ t: t, m: m, ms: this._durationMS });
         }
       }
@@ -5862,11 +6765,17 @@ function _SMF() {
     if (this.playing) this.sndOff();
   };
   Player.prototype._toPos = function() {
-    for(this._ptr = 0; this._ptr < this._data.length; this._ptr++) {
-      var e = this._data[this._ptr];
-      if (e.tt >= this._pos) break;
-      if (e.ff == 0x51 && this.ppqn) this._mul = this.ppqn * 1000.0 / _div(e.dd);
+    var i, e;
+    for(i = 0; i < this._hdr.length; i++) {
+      e = this._hdr[i];
+      if (e.isTempo()) this._mul = this.ppqn * 100000.0 / (e.getTempo() || 1);
     }
+    for(this._ptr = 0; this._ptr < this._data.length; this._ptr++) {
+      e = this._data[this._ptr];
+      if (e.tt >= this._pos) break;
+      if (e.isTempo() && this.ppqn) this._mul = this.ppqn * (e.isMidi2 ? 100000.0 : 1000.0) / (e.getTempo() || 1);
+    }
+    this._list = this._data;
     this.mul = this._mul * this._speed;
     this._t0 = _now();
     this._p0 = this._pos;
@@ -5888,7 +6797,7 @@ function _SMF() {
   function _not_a_syx() { _error('Not a SYX file'); }
 
   function SYX(arg) {
-    var self = this instanceof SYX ? this : self = new SYX();
+    var self = this instanceof SYX ? this : new SYX();
     self._orig = self;
     if (typeof arg != 'undefined') {
       if (arg instanceof SMF) {
@@ -5901,13 +6810,13 @@ function _SMF() {
       }
       try {
         if (arg instanceof ArrayBuffer) {
-          arg = String.fromCharCode.apply(null, new Uint8Array(arg));
+          arg = _u8a2s(new Uint8Array(arg));
         }
       }
       catch (err) {/**/}
       try {
         if (arg instanceof Uint8Array || arg instanceof Int8Array) {
-          arg = String.fromCharCode.apply(null, new Uint8Array(arg));
+          arg = _u8a2s(new Uint8Array(arg));
         }
       }
       catch (err) {/**/}
@@ -5925,6 +6834,7 @@ function _SMF() {
       var msg = [];
       var i = 0;
       var off = 0;
+      if (!arg.length) _error('Empty file');
       while (i < arg.length) {
         if (arg.charCodeAt(i) != 0xf0) _not_a_syx();
         while (i < arg.length) {
@@ -6004,14 +6914,13 @@ function _SMF() {
       e.tt = 0;
       pl._data.push(e);
     }
-    pl._type = 0;
+    pl._type = 'syx';
     pl._tracks = 1;
     pl._timing();
     pl.sndOff = function() {};
     return pl;
   };
 
-  SYX.prototype._ch = undefined;
   SYX.prototype._sxid = 0x7f;
   SYX.prototype._image = function() {
     var F = function() {}; F.prototype = this._orig;
@@ -6046,6 +6955,306 @@ function _SMF() {
   JZZ.lib.copyMidiHelpers(SYX);
 
   JZZ.MIDI.SYX = SYX;
+
+  function Clip(arg) {
+    var self = this instanceof Clip ? this : new Clip();
+    self._orig = self;
+    self._tick = 0;
+    self.ppqn = 96;
+    if (typeof arg != 'undefined') {
+      if (arg instanceof Clip) {
+        _copyClip(self, arg);
+        return self;
+      }
+      try {
+        if (arg instanceof ArrayBuffer) {
+          arg = _u8a2s(new Uint8Array(arg));
+        }
+      }
+      catch (err) {/**/}
+      try {
+        if (arg instanceof Uint8Array || arg instanceof Int8Array) {
+          arg = _u8a2s(new Uint8Array(arg));
+        }
+      }
+      catch (err) {/**/}
+      try {
+        /* istanbul ignore next */
+        if (arg instanceof Buffer) {
+          arg = arg.toString('binary');
+        }
+      }
+      catch (err) {/**/}
+      if (typeof arg != 'string') {
+        arg = String.fromCharCode.apply(null, arg);
+      }
+      _loadClip(self, arg, 0);
+      return self;
+    }
+    if (!self.header) self.header = new ClipHdr();
+    if (!self.length) {
+      var msg = JZZ.UMP.umpEndClip();
+      msg.tt = 0;
+      self.push(msg);
+    }
+    return self;
+  }
+  Clip.version = function() { return _ver; };
+  Clip.prototype = [];
+  Clip.prototype.constructor = Clip;
+  Clip.prototype._sxid = 0x7f;
+  var SMF2CLIP = 'SMF2CLIP';
+
+  Clip.prototype._image = function() {
+    var F = function() {}; F.prototype = this._orig;
+    var img = new F();
+    img._gr = this._gr;
+    img._ch = this._ch;
+    img._sxid = this._sxid;
+    img._tick = this._tick;
+    return img;
+  };
+  Clip.prototype.send = function(msg) { return this.add(this._tick, msg); };
+  Clip.prototype.tick = function(t) {
+    if (t != parseInt(t) || t < 0) throw RangeError('Bad tick value: ' + t);
+    if (!t) return this;
+    var img = this._image();
+    img._tick = this._tick + t;
+    return img;
+  };
+  Clip.prototype.add = function(t, msg) {
+    t = parseInt(t);
+    if(isNaN(t) || t < 0) _error('Invalid parameter');
+    msg = JZZ.UMP(msg);
+    var end = this._orig[this._orig.length - 1];
+    if (end.tt < t) end.tt = t;
+    if (msg.isStartClip() || msg.isEndClip()) return this;
+    if (msg.isDelta()) return this.tick(msg.getDelta());
+    msg.tt = t;
+    var i;
+    for (i = 0; i < this._orig.length - 1; i++) if (this._orig[i].tt > t) break;
+    this._orig.splice(i, 0, msg);
+    return this;
+  };
+  Clip.prototype.sxId = function(id) {
+    if (typeof id == 'undefined') id = Clip.prototype._sxid;
+    if (id == this._sxid) return this;
+    if (id != parseInt(id) || id < 0 || id > 0x7f) throw RangeError('Bad MIDI value: ' + id);
+    var img = this._image();
+    img._sxid = id;
+    return img;
+  };
+  Clip.prototype.gr = function(g) {
+    if (g == this._gr || typeof g == 'undefined' && typeof this._gr == 'undefined') return this;
+    if (typeof g != 'undefined') {
+      if (g != parseInt(g) || g < 0 || g > 15) throw RangeError('Bad channel value: ' + g  + ' (must be from 0 to 15)');
+    }
+    var img = this._image();
+    img._gr = g;
+    return img;
+  };
+  Clip.prototype.ch = function(c) {
+    if (c == this._ch || typeof c == 'undefined' && typeof this._ch == 'undefined') return this;
+    if (typeof c != 'undefined') {
+      if (c != parseInt(c) || c < 0 || c > 15) throw RangeError('Bad channel value: ' + c  + ' (must be from 0 to 15)');
+    }
+    var img = this._image();
+    img._ch = c;
+    return img;
+  };
+
+  function ClipHdr() {
+    this._orig = this;
+    this._tick = 0;
+  }
+  ClipHdr.prototype = [];
+  ClipHdr.prototype.constructor = ClipHdr;
+  ClipHdr.prototype._image = Clip.prototype._image;
+  ClipHdr.prototype.send = Clip.prototype.send;
+  ClipHdr.prototype.tick = Clip.prototype.tick;
+  ClipHdr.prototype.gr = Clip.prototype.gr;
+  ClipHdr.prototype.ch = Clip.prototype.ch;
+  ClipHdr.prototype.sxId = Clip.prototype.sxId;
+  ClipHdr.prototype.add = function(t, msg) {
+    t = parseInt(t);
+    if(isNaN(t) || t < 0) _error('Invalid parameter');
+    msg = JZZ.UMP(msg);
+    if (msg.isStartClip() || msg.isEndClip()) return this;
+    if (msg.isDelta()) return this.tick(msg.getDelta());
+    msg.tt = t;
+    var i;
+    for (i = 0; i < this._orig.length; i++) if (this._orig[i].tt > t) break;
+    this._orig.splice(i, 0, msg);
+    return this;
+  };
+
+  function _copyClip(clip, x) {
+    var i, m;
+    clip.length = 0;
+    clip.header = new ClipHdr();
+    clip.ppqn = x.ppqn;
+    for (i = 0; i < x.header.length; i++) {
+      m = new JZZ.UMP(x.header[i]);
+      m.tt = x.header[i].tt;
+      clip.header.push(m);
+    }
+    for (i = 0; i < x.length; i++) {
+      m = new JZZ.UMP(x[i]);
+      m.tt = x[i].tt;
+      clip.push(m);
+    }
+  }
+  function _loadClip(clip, s, off) {
+    if (!s.length) _error('Empty clip');
+    if (s.substr(0, 8) != SMF2CLIP) {
+      var z = s.indexOf(SMF2CLIP);
+      if (z != -1) {
+        s = s.substr(z);
+        clip._complain(off, 'Extra leading characters', z);
+        off += z;
+      }
+      else _error('Not a clip');
+    }
+    off += 8;
+    var a, i, m, t, len, prev;
+    clip.length = 0;
+    clip.header = new ClipHdr();
+    clip.ppqn = -1;
+    var inHdr = true;
+    var ended = false;
+    var tt = 0;
+    while (off < s.length) {
+      t = s.charCodeAt(off) >> 4;
+      len = [4, 4, 4, 8, 8, 16, 4, 4, 8, 8, 8, 12, 12, 16, 16, 16][t];
+      a = [];
+      for (i = 0; i < len; i++) a.push(s.charCodeAt(off + i));
+      prev = m;
+      m = JZZ.UMP(a);
+      if (m.isDelta()) {
+        if (prev && prev.isDelta())  clip._complain(off, 'Consequential Delta Ticks message');
+        tt += m.getDelta();
+      }
+      else {
+        m.tt = tt;
+        if (inHdr) {
+          if (m.isStartClip()) {
+            tt = 0;
+            inHdr = false;
+          }
+          else if (m.isTicksPQN()) {
+            if (clip.ppqn != -1) clip._complain(off, 'Multiple Ticks PQN message');
+            clip.ppqn = m.getTicksPQN();
+            if (!clip.ppqn) {
+              clip._complain(off, 'Bad Ticks PQN value: 0');
+              clip.ppqn = 96;
+            }
+          }
+          else if (m.isEndClip()) {
+            clip._complain(off, 'Unexpected End of Clip message');
+          }
+          else clip.header.push(m);
+        }
+        else {
+          if (m.isStartClip()) {
+            clip._complain(off, 'Repeated Start of Clip message');
+          }
+          else if (m.isEndClip()) {
+            if (ended) clip._complain(off, 'Repeated End of Clip message');
+            ended = true;
+          }
+          else clip.push(m);
+        }
+      }
+      off += len;
+    }
+    m = JZZ.UMP.umpEndClip();
+    m.tt = tt;
+    clip.push(m);
+    if (clip.ppqn == -1) {
+      clip._complain(off, 'Missing Ticks PQN message');
+      clip.ppqn = 96;
+    }
+  }
+  Clip.prototype._complain = function(off, msg, data, tick) {
+    if (!this._warn) this._warn = [];
+    var w = { off: off, msg: msg, data: data };
+    if (typeof tick != 'undefined') w.tick = tick;
+    this._warn.push(w);
+  };
+
+  Clip.prototype.dump = function() {
+    var i, tt;
+    var a = [SMF2CLIP];
+    a.push(JZZ.UMP.umpDelta(0).dump());
+    a.push(JZZ.UMP.umpTicksPQN(this.ppqn).dump());
+    tt = 0;
+    for (i = 0; i < this.header.length; i++) {
+      a.push(JZZ.UMP.umpDelta(this.header[i].tt - tt).dump());
+      a.push(this.header[i].dump());
+      tt = this.header[i].tt;
+    }
+    a.push(JZZ.UMP.umpDelta(0).dump());
+    a.push(JZZ.UMP.umpStartClip().dump());
+    tt = 0;
+    for (i = 0; i < this.length; i++) {
+      a.push(JZZ.UMP.umpDelta(this[i].tt - tt).dump());
+      a.push(this[i].dump());
+      tt = this[i].tt;
+    }
+    return a.join('');
+  };
+  Clip.prototype.toBuffer = function() {
+    return Buffer.from(this.dump(), 'binary');
+  };
+  Clip.prototype.toUint8Array = function() {
+    var str = this.dump();
+    var buf = new ArrayBuffer(str.length);
+    var arr = new Uint8Array(buf);
+    for (var i = 0; i < str.length; i++) arr[i] = str.charCodeAt(i);
+    return arr;
+  };
+  Clip.prototype.toArrayBuffer = function() {
+    return this.toUint8Array().buffer;
+  };
+  Clip.prototype.toInt8Array = function() {
+    return new Int8Array(this.toArrayBuffer());
+  };
+  Clip.prototype.toString = function() {
+    var i;
+    var a = [SMF2CLIP, 'Header'];
+    a.push('  0: ' + JZZ.UMP.umpTicksPQN(this.ppqn));
+    for (i = 0; i < this.header.length; i++) a.push('  ' + this.header[i].tt + ': ' + this.header[i]);
+    a.push('Data', '  0: ' + JZZ.UMP.umpStartClip());
+    for (i = 0; i < this.length; i++) a.push('  ' + this[i].tt + ': ' + this[i]);
+    return a.join('\n');
+  };
+  Clip.prototype.annotate = function() {
+    return this;
+  };
+  Clip.prototype.player = function() {
+    var pl = new Player();
+    pl.ppqn = this.ppqn;
+    var i, e;
+    for (i = 0; i < this.header.length; i++) {
+      e = JZZ.MIDI2(this.header[i]);
+      pl._hdr.push(e);
+    }
+    for (i = 0; i < this.length; i++) {
+      e = JZZ.MIDI2(this[i]);
+      pl._data.push(e);
+    }
+    pl._type = 'clip';
+    pl._tracks = 1;
+    pl._timing();
+    pl.sndOff = function() {};
+    return pl;
+  };
+
+  JZZ.lib.copyMidi2Helpers(Clip);
+  JZZ.lib.copyMidi2Helpers(ClipHdr);
+
+  JZZ.MIDI.Clip = Clip;
+
 }
 
 // JZZ.gui.Player.js
@@ -6058,6 +7267,77 @@ function _Player() {
   function nop() {}
   var _noBtn = { on: nop, off: nop, disable: nop, title: nop, div: {} };
 
+  var theme = {
+    container: {
+      backgroundColor: '#888',
+      borderRadius: '0px',
+      borderWidth: '1px'
+    },
+    lbl: {
+      color: '#aaa',
+      fontSize: '12px',
+      fontFamily: 'Arial, Helvetica, sans-serif'
+    },
+    btn: {
+      borderRadius: '0px',
+      backgroundColor: {
+        on: '#ddd',
+        off: '#aaa',
+        disable: '#888'
+      },
+      borderColor: {
+        on: '#ccc',
+        off: '#ccc',
+        disable: '#aaa'
+      },
+      svgFill: {
+        on: '#000',
+        off: '#000',
+        disable: '#555'
+      },
+      close: {
+        borderRadius: '0px',
+        backgroundColor: '#f44'
+      }
+    },
+    rail: {
+      borderRadius: '2px',
+      borderWidth: '1px',
+      backgroundColor: {
+        enable: '#ccc',
+        disable: '#888'
+      },
+      borderColor: {
+        enable: '#ccc',
+        disable: '#aaa'
+      }
+    },
+    caret: {
+      borderRadius: '6px',
+      borderWidth: '1px',
+      backgroundColor: {
+        mouseDown: '#ddd',
+        mouseUp: '#aaa',
+        enable: '#aaa',
+        disable: '#888'
+      },
+      borderColor: {
+        enable: '#ccc',
+        disable: '#aaa'
+      }
+    },
+    svg: {
+      play: '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z"/><path d="M0 0h24v24H0z" fill="none"/></svg>',
+      pause: '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/><path d="M0 0h24v24H0z" fill="none"/></svg>',
+      stop: '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M6 6h12v12H6z"/></svg>',
+      loop: '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>',
+      more: '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>',
+      open: '<svg fill="#555" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"/><path d="M10 4H2v16h20V6H12l-2-2z"/></svg>',
+      link: '<svg fill="#555" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/><path fill="none" d="M0 0h24v24H0z"/></svg>',
+      close: '<svg stroke="#ff8" xmlns="http://www.w3.org/2000/svg" width="7" height="7" viewBox="0 0 7 7"><line x1="1" y1="1" x2="6" y2="6"/><line x1="1" y1="6" x2="6" y2="1"/></svg>'
+    }
+  };
+  
   function Btn(html) {
     this.div = document.createElement('div');
     this.div.style.display = 'inline-block';
@@ -6066,10 +7346,11 @@ function _Player() {
     this.div.style.top = '8px';
     this.div.style.margin = '0';
     this.div.style.padding = '2px';
+    this.div.style.borderRadius = theme.btn.borderRadius;
     this.div.style.borderStyle = 'solid';
-    this.div.style.borderWidth = '1px';
-    this.div.style.borderColor = '#aaa';
-    this.div.style.backgroundColor = '#888';
+    this.div.style.borderWidth = theme.container.borderWidth;
+    this.div.style.borderColor = theme.btn.borderColor.disable;
+    this.div.style.backgroundColor = theme.btn.backgroundColor.disable;
     this.div.style.lineHeight = '0';
     this.div.style.lineSpasing = '0';
     this.div.style.width = '18px';
@@ -6077,29 +7358,21 @@ function _Player() {
     this.div.innerHTML = html;
   }
   Btn.prototype.on = function() {
-    this.div.style.backgroundColor = '#ddd';
-    this.div.style.borderColor = '#ccc';
-    this.div.firstChild.style.fill = '#000';
+    this.div.style.backgroundColor = theme.btn.backgroundColor.on;
+    this.div.style.borderColor = theme.btn.borderColor.on;
+    this.div.firstChild.style.fill = theme.btn.svgFill.on;
   };
   Btn.prototype.off = function() {
-    this.div.style.backgroundColor = '#aaa';
-    this.div.style.borderColor = '#ccc';
-    this.div.firstChild.style.fill = '#000';
+    this.div.style.backgroundColor = theme.btn.backgroundColor.off;
+    this.div.style.borderColor = theme.btn.borderColor.off;
+    this.div.firstChild.style.fill = theme.btn.svgFill.off;
   };
   Btn.prototype.disable = function() {
-    this.div.style.backgroundColor = '#888';
-    this.div.style.borderColor = '#aaa';
-    this.div.firstChild.style.fill = '#555';
+    this.div.style.backgroundColor = theme.btn.backgroundColor.disable;
+    this.div.style.borderColor = theme.btn.borderColor.disable;
+    this.div.firstChild.style.fill = theme.btn.svgFill.disable;
   };
   Btn.prototype.title = function(s) { this.div.title = s; };
-  var svg_play = '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z"/><path d="M0 0h24v24H0z" fill="none"/></svg>';
-  var svg_pause = '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/><path d="M0 0h24v24H0z" fill="none"/></svg>';
-  var svg_stop = '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M6 6h12v12H6z"/></svg>';
-  var svg_loop = '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>';
-  var svg_more = '<svg fill="#555" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h24v24H0z" fill="none"/><path d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/></svg>';
-  var svg_open = '<svg fill="#555" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="none" d="M0 0h24v24H0V0z"/><path d="M10 4H2v16h20V6H12l-2-2z"/></svg>';
-  var svg_link = '<svg fill="#555" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path d="M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67l2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z"/><path fill="none" d="M0 0h24v24H0z"/></svg>';
-  var svg_close = '<svg stroke="#ff8" xmlns="http://www.w3.org/2000/svg" width="7" height="7" viewBox="0 0 7 7"><line x1="1" y1="1" x2="6" y2="6"/><line x1="1" y1="6" x2="6" y2="1"/></svg>';
 
   function _stopProp(e) { e.stopPropagation(); e.preventDefault(); }
 
@@ -6110,8 +7383,9 @@ function _Player() {
     self.gui.style.boxSizing = 'content-box';
     self.gui.style.margin = '0px';
     self.gui.style.padding = '0px';
+    self.gui.style.borderRadius = theme.container.borderRadius;
     self.gui.style.borderStyle = 'none';
-    self.gui.style.backgroundColor = '#888';
+    self.gui.style.backgroundColor = theme.container.backgroundColor;
     self.gui.style.width = '270px';
     self.gui.style.height = '40px';
 
@@ -6120,7 +7394,7 @@ function _Player() {
     var step = 28;
 
     if (arg.play) {
-      self.playBtn = new Btn(svg_play);
+      self.playBtn = new Btn(theme.svg.play);
       self.playBtn.div.style.left = left + 'px';
       left += step;
       self.playBtn.div.title = 'play';
@@ -6130,7 +7404,7 @@ function _Player() {
     else self.playBtn = _noBtn;
 
     if (arg.pause) {
-      self.pauseBtn = new Btn(svg_pause);
+      self.pauseBtn = new Btn(theme.svg.pause);
       self.pauseBtn.div.style.left = left + 'px';
       left += step;
       self.pauseBtn.div.title = 'pause';
@@ -6140,7 +7414,7 @@ function _Player() {
     else self.pauseBtn = _noBtn;
 
     if (arg.stop) {
-      self.stopBtn = new Btn(svg_stop);
+      self.stopBtn = new Btn(theme.svg.stop);
       self.stopBtn.div.style.left = left + 'px';
       left += step;
       self.stopBtn.div.title = 'stop';
@@ -6150,7 +7424,7 @@ function _Player() {
     else self.stopBtn = _noBtn;
 
     if (arg.loop) {
-      self.loopBtn = new Btn(svg_loop);
+      self.loopBtn = new Btn(theme.svg.loop);
       self.loopBtn.div.style.left = left + 'px';
       left += step;
       self.loopBtn.div.title = 'loop';
@@ -6160,7 +7434,7 @@ function _Player() {
     else self.loopBtn = _noBtn;
 
     if (arg.midi) {
-      self.midiBtn = new Btn(svg_more);
+      self.midiBtn = new Btn(theme.svg.more);
       self.midiBtn.div.style.left = right + 'px';
       right -= step;
       self.midiBtn.div.title = 'midi';
@@ -6183,7 +7457,7 @@ function _Player() {
     else self.midiBtn = _noBtn;
 
     if (arg.link) {
-      self.linkBtn = new Btn(svg_link);
+      self.linkBtn = new Btn(theme.svg.link);
       self.linkBtn.div.style.left = right + 'px';
       right -= step;
       self.linkBtn.div.title = 'link';
@@ -6191,7 +7465,7 @@ function _Player() {
     }
 
     if (arg.file) {
-      self.fileBtn = new Btn(svg_open);
+      self.fileBtn = new Btn(theme.svg.open);
       self.fileBtn.div.style.left = right + 'px';
       right -= step;
       self.fileBtn.div.title = 'file';
@@ -6200,8 +7474,8 @@ function _Player() {
       self.fileInput = document.createElement('input');
       self.fileInput.type = 'file';
       self.fileInput.style.position = 'fixed';
-      self.fileInput.style.top = '-1000px';
-      self.fileInput.accept = '.mid, .midi, .kar, .rmi, .syx';
+      self.fileInput.style.visibility = 'hidden';
+      self.fileInput.accept = '.mid, .midi, .midi2, .kar, .rmi, .syx';
       self.gui.appendChild(self.fileInput);
 
       if (window.FileReader) {
@@ -6224,12 +7498,13 @@ function _Player() {
       self.closeBtn.style.left = '262px';
       self.closeBtn.style.margin = '0';
       self.closeBtn.style.padding = '0';
-      self.closeBtn.style.backgroundColor = '#f44';
+      self.closeBtn.style.borderRadius = theme.btn.close.borderRadius;
+      self.closeBtn.style.backgroundColor = theme.btn.close.backgroundColor;
       self.closeBtn.style.width = '7px';
       self.closeBtn.style.height = '7px';
       self.closeBtn.style.lineHeight = '0';
       self.closeBtn.style.lineSpasing = '0';
-      self.closeBtn.innerHTML = svg_close;
+      self.closeBtn.innerHTML = theme.svg.close;
       self.closeBtn.title = 'close';
       self.closeBtn.addEventListener('click', function() { self.destroy(); });
       self.gui.appendChild(self.closeBtn);
@@ -6246,9 +7521,9 @@ function _Player() {
     self.lbl.style.height = '12px';
     self.lbl.style.padding = '0';
     self.lbl.style.textAlign = 'center';
-    self.lbl.style.color = '#aaa';
-    self.lbl.style.fontSize = '12px';
-    self.lbl.style.fontFamily = 'Arial, Helvetica, sans-serif';
+    self.lbl.style.color = theme.lbl.color;
+    self.lbl.style.fontSize = theme.lbl.fontSize;
+    self.lbl.style.fontFamily = theme.lbl.fontFamily;
     self.gui.appendChild(self.lbl);
 
     self.rail = document.createElement('div');
@@ -6261,10 +7536,10 @@ function _Player() {
     self.rail.style.height = '0';
     self.rail.style.padding = '1px';
     self.rail.style.borderStyle = 'solid';
-    self.rail.style.borderWidth = '1px';
-    self.rail.style.borderRadius = '2px';
-    self.rail.style.borderColor = '#aaa';
-    self.rail.style.backgroundColor = '#888';
+    self.rail.style.borderWidth = theme.rail.borderWidth;
+    self.rail.style.borderRadius = theme.rail.borderRadius;
+    self.rail.style.borderColor = theme.rail.borderColor.disable;
+    self.rail.style.backgroundColor = theme.rail.backgroundColor.disable;
     self.gui.appendChild(self.rail);
 
     self.caret = document.createElement('div');
@@ -6277,10 +7552,10 @@ function _Player() {
     self.caret.style.left = '-5px';
     self.caret.style.padding = '4px';
     self.caret.style.borderStyle = 'solid';
-    self.caret.style.borderWidth = '1px';
-    self.caret.style.borderRadius = '6px';
-    self.caret.style.borderColor = '#aaa';
-    self.caret.style.backgroundColor = '#888';
+    self.caret.style.borderWidth = theme.caret.borderWidth;
+    self.caret.style.borderRadius = theme.caret.borderRadius;
+    self.caret.style.borderColor = theme.caret.borderColor.disable;
+    self.caret.style.backgroundColor = theme.caret.backgroundColor.disable;
     self.caret.addEventListener('mousedown', function(e) { self._mousedown(e); });
     self.rail.appendChild(self.caret);
 
@@ -6291,6 +7566,8 @@ function _Player() {
   var _floating = 0;
   function Player(x, y) {
     if (!(this instanceof Player)) return new Player(x, y);
+    this._m2m1 = new JZZ.M2M1();
+    this._connect(this._m2m1);
     var arg = {
       at: undefined,
       x: undefined,
@@ -6360,10 +7637,10 @@ function _Player() {
     this.midiBtn.disable();
     if (this._conn) this.midiBtn.off();
     this.fileBtn.off();
-    this.rail.style.borderColor = '#aaa';
-    this.rail.style.backgroundColor = '#888';
-    this.caret.style.borderColor = '#aaa';
-    this.caret.style.backgroundColor = '#888';
+    this.rail.style.borderColor = theme.rail.borderColor.disable;
+    this.rail.style.backgroundColor = theme.rail.backgroundColor.disable;
+    this.caret.style.borderColor = theme.caret.borderColor.disable;
+    this.caret.style.backgroundColor = theme.caret.backgroundColor.disable;
   };
   Player.prototype.enable = function() {
     this.playBtn.off();
@@ -6371,9 +7648,9 @@ function _Player() {
     this.stopBtn.off();
     this.loopBtn.off();
     if (this._conn) this.midiBtn.off();
-    this.rail.style.borderColor = '#ccc';
-    this.caret.style.backgroundColor = '#aaa';
-    this.caret.style.borderColor = '#ccc';
+    this.rail.style.borderColor = theme.rail.borderColor.enable;
+    this.caret.style.backgroundColor = theme.caret.backgroundColor.enable;
+    this.caret.style.borderColor = theme.caret.borderColor.enable;
   };
   Player.prototype.load = function(smf) {
     var self = this;
@@ -6441,7 +7718,7 @@ function _Player() {
           self._out = this;
           self._outname = this.name();
           self.midiBtn.title(self._outname);
-          self._connect(this);
+          self._m2m1.connect(this);
           self._waiting = false;
           self.onSelect(self._outname);
           if (self._playing) {
@@ -6498,13 +7775,16 @@ function _Player() {
       }
     }
   };
+  Player.prototype.onLoop = nop;
   Player.prototype.loop = function(n) {
     if (this._player) {
+      var self = this;
       if (typeof n == 'undefined') n = !this._loop;
       if (n == parseInt(n) && n > 0) this._loop = n;
       else this._loop = n ? -1 : 0;
       if (this._loop == 1) this._loop = 0;
       this._player.loop(this._loop);
+      JZZ.lib.schedule(function() { self.onLoop(n); });
       if (this._loop) {
         this.loopBtn.on();
         this.loopBtn.title('loop: ' + (this._loop == -1 ? '\u221e' : this._loop));
@@ -6556,15 +7836,24 @@ function _Player() {
       var bytes = new Uint8Array(e.target.result);
       for (var i = 0; i < bytes.length; i++) data += String.fromCharCode(bytes[i]);
       var smf;
+      var mime = 'audio/midi';
       try {
-        smf = new JZZ.MIDI.SYX(data);
+        smf = new JZZ.MIDI.Clip(data);
+        mime = 'audio/midi2';
+      }
+      catch (err) {}
+      try {
+        if (!smf) {
+          smf = new JZZ.MIDI.SYX(data);
+          mime = 'application/octet-stream';
+        }
       }
       catch (err) {}
       try {
         if (!smf) smf = new JZZ.MIDI.SMF(data);
         self.stop();
         JZZ.lib.schedule(function() { self.load(smf); });
-        if (self.linkBtn) self.setUrl('data:audio/midi;base64,' + JZZ.lib.toBase64(data), f.name);
+        if (self.linkBtn) self.setUrl('data:' + mime + ';base64,' + JZZ.lib.toBase64(data), f.name);
       }
       catch (err) { console.log(err.message); }
     };
@@ -6606,11 +7895,11 @@ function _Player() {
         self._closeselect();
         if (self._out) {
           if (self._playing) for (var c = 0; c < 16; c++) self._out._receive(JZZ.MIDI.allSoundOff(c));
-          self._disconnect(self._out);
+          self._m2m1.disconnect(self._out);
           self._out.close();
         }
         self._out = this;
-        self._connect(this);
+        self._m2m1.connect(this);
         self.midiBtn.title(self._outname);
         self.onSelect(self._outname);
         setTimeout(function() { self.onSelect(self._outname); }, 0);
@@ -6692,7 +7981,7 @@ function _Player() {
   Player.prototype._mousedown = function(e) {
     if (_lftBtnDn(e) && this._player) {
       if (!this._more) e.preventDefault();
-      this.caret.style.backgroundColor = '#ddd';
+      this.caret.style.backgroundColor = theme.caret.backgroundColor.mouseDown;
       this._wasPlaying = this._playing;
       this._player.pause();
       this._caretX = e.clientX;
@@ -6715,7 +8004,7 @@ function _Player() {
           this._wasPlaying = undefined;
           this._player.resume();
         }
-        this.caret.style.backgroundColor = '#aaa';
+        this.caret.style.backgroundColor = theme.caret.backgroundColor.mouseUp;
         this._caretX = undefined;
       }
     }
@@ -6762,17 +8051,20 @@ function _Player() {
   Player.prototype.disconnect = function(port) {
     if (port == this) {
       this._conn = false;
-      if (this._out) this._disconnect(this._out);
+      if (this._out) this._m2m1.disconnect(this._out);
       this._outname = undefined;
       this.midiBtn.disable();
     }
     else {
       this._disconnect(port);
+      this._connect(this._m2m1);
     }
   };
   Player.prototype.connected = function() { return this._outname; };
 
   JZZ.gui.Player = Player;
+  JZZ.gui.Player.Btn = Btn;
+  JZZ.gui.Player.theme = theme;
 }
 
 })();
