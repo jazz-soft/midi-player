@@ -1,7 +1,7 @@
 (function() {
   var _data_ = /^data:/i;
   var _data = /^data:audio\/midi/i;
-  var _midi_kar_rmi = /\.(midi?|kar|rmi)$/i;
+  var _midi_kar_rmi = /\.(midi?|kar|rmi|midi2)$/i;
   var _mp3_wav_ogg = /\.(mp3|wav|ogg)$/i;
   var __midi1 = 'audio/midi';
   var __midi2 = 'audio/mid';
@@ -9,6 +9,7 @@
   var __midi4 = 'audio/x-mid';
   var __midi5 = 'midi/mid';
   var __midi6 = 'application/x-midi';
+  var __midi7 = 'audio/midi2';
   var __mpeg = 'audio/mpeg';
   var __ogg = 'audio/ogg';
   var __wav = 'audio/wav';
@@ -33,7 +34,7 @@
   }
   function isMidi(s, t) {
     return s.match(_data) || s.match(_midi_kar_rmi) ||
-      t ==__midi1 || t ==__midi2 || t ==__midi3 || t ==__midi4 || t ==__midi5 || t ==__midi6;
+      t ==__midi1 || t ==__midi2 || t ==__midi3 || t ==__midi4 || t ==__midi5 || t ==__midi6 || t ==__midi7;
   }
   function isAudio(s, t) { return s.match(_mp3_wav_ogg) || t == __mpeg || t == __wav || t == __ogg; }
 
@@ -180,7 +181,10 @@
             if (disposition && disposition[disposition.length - 1] == '"') disposition = disposition.substring(0, disposition.length - 1);
             if (type && (
               type.match(__midi1) || type.match(__midi2) || type.match(__midi3) ||
-              type.match(__midi4) || type.match(__midi5) || type.match(__midi6))) {
+              type.match(__midi4) || type.match(__midi5) || type.match(__midi6) || type.match(__midi7))) {
+              good();
+            }
+            else if (type == 'application/octet-stream' && url.match(_midi_kar_rmi)) {
               good();
             }
             else if (disposition && disposition.match(_midi_kar_rmi)) {
@@ -218,6 +222,17 @@
     }
     return a;
   }
+  function load_midi(data) {
+    try {
+      return JZZ.MIDI.SMF(data);
+    }
+    catch (e) {
+      try {
+        return new JZZ.MIDI.Clip(data);
+      }
+      catch (e) {/**/}
+    }
+  }
   function load(player, url, play, loop) {
     var isData = url.match(_data_);
     var div = player.gui;
@@ -225,13 +240,14 @@
     player.setUrl(url, isData ? 'midi-player.mid' : undefined);
     player.label('<a href="https://jazz-soft.net/download/midi-player" title="info…" target="_blank" style="color:#aaa;">jazz-soft</a>');
     if (isData) {
-      try {
-        player.load(new JZZ.MIDI.SMF(decode(url)));
+      var smf = load_midi(decode(url));
+      if (smf) {
+        player.load(smf);
         div.title = title;
         if (loop) player.loop(loop);
         if (play) player.play();
       }
-      catch (e) {
+      else {
         div.title = 'Cannot load ' + title;
       }
     }
@@ -252,13 +268,14 @@
               r = xhttp.responseText;
               for (i = 0; i < r.length; i++) data += String.fromCharCode(r.charCodeAt(i) & 0xff);
             }
-            try {
-              player.load(new JZZ.MIDI.SMF(data));
+            var smf = load_midi(data);
+            if (smf) {
+              player.load(smf);
               div.title = title;
               if (loop) player.loop(loop);
               if (play) player.play();
             }
-            catch (e) {
+            else {
               div.title = 'Cannot load ' + title;
             }
           }
