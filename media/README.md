@@ -13,7 +13,7 @@ To add a new language, for example, **zz (Klingon)**:
 - translate the relevant text (except the headers) in the new `zz.md` file
 - commit the new files and open the pull request
 
-**NO GOOGLE TRANSLATE PLEASE!**
+**NO AI/GOOGLE TRANSLATE PLEASE!**
 
 We also need your help to ensure that the existing translations are in sync with the English version,
 free from typos and don't sound awkward.

@@ -9,9 +9,9 @@ MIDI Player
 Plays all types of MIDI files in browser
 
 ## Description (Mozilla Add-ons)
-Play all kinds of MIDI files in browser.
+Play all kinds of MIDI files in browser. Including MIDI 2.0.
 
-MIDI Player extension supports *.mid/*.kar/*.rmi formats.
+MIDI Player extension supports *.mid/*.kar/*.rmi/*.midi2 formats.
 
 It looks for MIDI files in hyperlinks and &lt;audio&gt;/&lt;bgsound&gt;/&lt;object&gt;/&lt;embed&gt; tags on the web pages, and plays them.
 
@@ -22,9 +22,9 @@ Same-origin limitation: MIDI files must be located at the same domain with the r
 Please visit https://github.com/jazz-soft/midi-player to see the source code and share your feedback.
 
 ## Description (Chrome Web Store)
-Play all kinds of MIDI files in browser.
+Play all kinds of MIDI files in browser. Including MIDI 2.0.
 
-MIDI Player extension supports *.mid/*.kar/*.rmi formats.
+MIDI Player extension supports *.mid/*.kar/*.rmi/*.midi2 formats.
 
 It looks for MIDI files in hyperlinks and <audio>/<bgsound>/<object>/<embed> tags on the web pages, and plays them.
 

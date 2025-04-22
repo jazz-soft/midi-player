@@ -6,7 +6,7 @@
 
 Playing MIDI files in `hyperlinks` and `<audio>`, `<bgsound>`, `<object>`, `<embed>` tags.
 
-Supported file formats: `*.mid`, `*.kar`, `*.rmi`.
+Supported file formats: `*.mid`, `*.kar`, `*.rmi`, `*.midi2`.
 
 Same-origin limitation: MIDI files must be located at the same domain with the referencing web page, or at the CORS-enabled server.
 
@@ -23,9 +23,10 @@ For better sound quality, you may also want to install
 [**Jazz-Plugin**](https://jazz-soft.net).
 
 ## Safari
-[Get the **MIDI Player** extension from **Apple App Store**](https://apps.apple.com/us/app/midi-player/id1507636491).  
-For better sound quality, you may also want to install
-[**Jazz-MIDI**](https://apps.apple.com/us/app/jazz-midi/id1506447231).
+Coming soon...
+
+## Test page
+https://jazz-soft.net/download/midi-player
 
 ## Help needed!
 We are looking for your help to [**localize the extension**](media/README.md)...
