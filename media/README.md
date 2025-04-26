@@ -59,6 +59,9 @@ free from typos and don't sound awkward.
 ![272x42](midi-player-screenshot-272x42.png)
 
 #### midi-player-screenshot-640x400.png  
+![440x280](midi-player-screenshot-440x280.png)
+
+#### midi-player-screenshot-640x400.png  
 ![640x400](midi-player-screenshot-640x400.png)
 
 #### safari-install-2560-1600.png
