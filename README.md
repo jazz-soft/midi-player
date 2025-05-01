@@ -10,11 +10,14 @@ Supported file formats: `*.mid`, `*.kar`, `*.rmi`, `*.midi2`.
 
 Same-origin limitation: MIDI files must be located at the same domain with the referencing web page, or at the CORS-enabled server.
 
-## Chrome (also works on Chromebook), Opera, and Microsoft Edge (Chromium)
+## Chrome (also works on Chromebook), Opera, and Microsoft Edge
 [Get the **MIDI Player** extension at **Chrome Web Store**](https://chrome.google.com/webstore/detail/midi-player/khppfbnjbaampmeeiocjhcodkklkcfjf).  
 For better sound quality, you may also want to install
 [**Jazz-MIDI**](https://chrome.google.com/webstore/detail/jazz-midi/jhdoobfdaejmldnpihidjemjcbpfmbkm) extension and
 [**Jazz-Plugin**](https://jazz-soft.net).
+
+## Microsoft Edge
+[Get the **MIDI Player** extension at **Edge Add-ons**](https://microsoftedge.microsoft.com/addons/detail/midi-player/cfllhpolodlcjlomdphognlodkaikmfo)
 
 ## Firefox (also works on Android)
 [Get the **MIDI Player** extension at **Mozilla Add-ons**](https://addons.mozilla.org/en-US/firefox/addon/midi-player).  
